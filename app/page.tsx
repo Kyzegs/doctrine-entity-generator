@@ -1,103 +1,243 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { SQLParser } from '@/lib/sql-parser';
+import { DoctrineXMLGenerator } from '@/lib/doctrine-xml-generator';
+import { PHPEntityGenerator } from '@/lib/php-entity-generator';
+import { GenerationOptions } from '@/lib/types';
+import { CodeOutput } from '@/components/code-output';
+import { OptionsForm } from '@/components/options-form';
+
+const EXAMPLE_SQL = {
+  mysql: `CREATE TABLE \`boarding\` (
+  \`id\` int(11) NOT NULL AUTO_INCREMENT,
+  \`company_id\` int(11) DEFAULT NULL,
+  \`supplier_id\` int(11) DEFAULT NULL,
+  \`status_id\` int(11) DEFAULT NULL,
+  \`pin\` varchar(2) COLLATE utf8_unicode_ci NOT NULL,
+  \`unique_key\` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
+  \`unique_data\` text COLLATE utf8_unicode_ci NOT NULL,
+  \`created\` int(11) NOT NULL,
+  \`created_by\` int(11) NOT NULL,
+  \`send_data\` text COLLATE utf8_unicode_ci NOT NULL,
+  \`send_data_valid\` tinyint(1) NOT NULL,
+  \`sent\` int(11) DEFAULT NULL,
+  \`sent_by\` int(11) DEFAULT NULL,
+  \`receive_data\` text COLLATE utf8_unicode_ci NOT NULL,
+  \`receive_data_valid\` tinyint(1) NOT NULL,
+  \`received\` int(11) DEFAULT NULL,
+  \`received_by\` int(11) DEFAULT NULL,
+  \`deleted\` int(11) DEFAULT NULL,
+  \`deleted_by\` int(11) DEFAULT NULL,
+  PRIMARY KEY (\`id\`),
+  KEY \`IDX_114209DA2ADD6D8C\` (\`supplier_id\`),
+  KEY \`IDX_114209DA6BF700BD\` (\`status_id\`),
+  KEY \`b_idx_company_id\` (\`company_id\`),
+  KEY \`b_idx_status_deleted\` (\`status_id\`,\`deleted\`),
+  CONSTRAINT \`FK_114209DA2ADD6D8C\` FOREIGN KEY (\`supplier_id\`) REFERENCES \`suppliers\` (\`id\`),
+  CONSTRAINT \`FK_114209DA6BF700BD\` FOREIGN KEY (\`status_id\`) REFERENCES \`status\` (\`id\`),
+  CONSTRAINT \`FK_114209DA979B1AD6\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\` (\`id\`)
+) ENGINE=InnoDB AUTO_INCREMENT=182192 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci`,
+
+  postgresql: `CREATE TABLE boarding (
+  id SERIAL PRIMARY KEY,
+  company_id INTEGER REFERENCES companies(id),
+  supplier_id INTEGER REFERENCES suppliers(id),
+  status_id INTEGER REFERENCES status(id),
+  pin VARCHAR(2) NOT NULL,
+  unique_key VARCHAR(40) NOT NULL,
+  unique_data TEXT NOT NULL,
+  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER NOT NULL,
+  send_data TEXT NOT NULL,
+  send_data_valid BOOLEAN NOT NULL DEFAULT false,
+  sent TIMESTAMP,
+  sent_by INTEGER,
+  receive_data TEXT NOT NULL,
+  receive_data_valid BOOLEAN NOT NULL DEFAULT false,
+  received TIMESTAMP,
+  received_by INTEGER,
+  deleted TIMESTAMP,
+  deleted_by INTEGER
+)`,
+
+  sqlite: `CREATE TABLE boarding (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id INTEGER,
+  supplier_id INTEGER,
+  status_id INTEGER,
+  pin TEXT NOT NULL,
+  unique_key TEXT NOT NULL,
+  unique_data TEXT NOT NULL,
+  created INTEGER NOT NULL,
+  created_by INTEGER NOT NULL,
+  send_data TEXT NOT NULL,
+  send_data_valid INTEGER NOT NULL,
+  sent INTEGER,
+  sent_by INTEGER,
+  receive_data TEXT NOT NULL,
+  receive_data_valid INTEGER NOT NULL,
+  received INTEGER,
+  received_by INTEGER,
+  deleted INTEGER,
+  deleted_by INTEGER,
+  FOREIGN KEY (company_id) REFERENCES companies(id),
+  FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+  FOREIGN KEY (status_id) REFERENCES status(id)
+)`,
+
+  mariadb: `CREATE TABLE \`boarding\` (
+  \`id\` int(11) NOT NULL AUTO_INCREMENT,
+  \`company_id\` int(11) DEFAULT NULL,
+  \`supplier_id\` int(11) DEFAULT NULL,
+  \`status_id\` int(11) DEFAULT NULL,
+  \`pin\` varchar(2) COLLATE utf8_unicode_ci NOT NULL,
+  \`unique_key\` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
+  \`unique_data\` text COLLATE utf8_unicode_ci NOT NULL,
+  \`created\` int(11) NOT NULL,
+  \`created_by\` int(11) NOT NULL,
+  \`send_data\` text COLLATE utf8_unicode_ci NOT NULL,
+  \`send_data_valid\` tinyint(1) NOT NULL,
+  \`sent\` int(11) DEFAULT NULL,
+  \`sent_by\` int(11) DEFAULT NULL,
+  \`receive_data\` text COLLATE utf8_unicode_ci NOT NULL,
+  \`receive_data_valid\` tinyint(1) NOT NULL,
+  \`received\` int(11) DEFAULT NULL,
+  \`received_by\` int(11) DEFAULT NULL,
+  \`deleted\` int(11) DEFAULT NULL,
+  \`deleted_by\` int(11) DEFAULT NULL,
+  PRIMARY KEY (\`id\`),
+  KEY \`b_idx_company_id\` (\`company_id\`),
+  CONSTRAINT \`FK_boarding_company\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\` (\`id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci`
+};
+
+const DEFAULT_SQL = EXAMPLE_SQL.mysql;
+
+const DEFAULT_OPTIONS: GenerationOptions = {
+  namespace: 'AntiCorruptionLayer\\Tinpay\\Entity',
+  generateFluentSetters: true,
+  generateInterfaces: true,
+  generateTraits: true,
+  entityPrefix: '',
+  entitySuffix: '',
+  databaseDialect: 'mysql'
+};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [sqlInput, setSqlInput] = useState(DEFAULT_SQL);
+  const [options, setOptions] = useState<GenerationOptions>(DEFAULT_OPTIONS);
+  const [xmlOutput, setXmlOutput] = useState('');
+  const [phpOutput, setPhpOutput] = useState('');
+  const [error, setError] = useState('');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const updateSqlForDialect = (dialect: 'mysql' | 'postgresql' | 'sqlite' | 'mariadb') => {
+    setSqlInput(EXAMPLE_SQL[dialect] || EXAMPLE_SQL.mysql);
+  };
+
+  const generateCode = () => {
+    try {
+      setError('');
+      
+      // Parse the SQL with the selected database dialect
+      const schema = SQLParser.parseCreateTable(sqlInput, options.databaseDialect);
+      
+      // Generate XML mapping
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+      setXmlOutput(xml);
+      
+      // Generate PHP entity
+      const php = PHPEntityGenerator.generate(schema, options);
+      setPhpOutput(php);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while generating code');
+      setXmlOutput('');
+      setPhpOutput('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Doctrine Entity Generator
+          </h1>
+          <p className="text-gray-600">
+            Generate Doctrine XML mappings and PHP entities from SQL CREATE TABLE statements
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Input Section */}
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="sql-input" className="block text-sm font-medium text-gray-700 mb-2">
+                SQL CREATE TABLE Statement
+              </label>
+              <textarea
+                id="sql-input"
+                value={sqlInput}
+                onChange={(e) => setSqlInput(e.target.value)}
+                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                placeholder="Paste your CREATE TABLE statement here..."
+              />
+            </div>
+
+            <OptionsForm 
+              options={options} 
+              onChange={(newOptions) => {
+                setOptions(newOptions);
+                // Update SQL example when dialect changes
+                if (newOptions.databaseDialect !== options.databaseDialect) {
+                  updateSqlForDialect(newOptions.databaseDialect);
+                }
+              }} 
+            />
+
+            <div className="flex gap-4">
+              <button
+                onClick={generateCode}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+              >
+                Generate Code
+              </button>
+            </div>
+
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Output Section */}
+          <div className="space-y-6">
+            {xmlOutput && (
+              <CodeOutput
+                title="Doctrine XML Mapping"
+                code={xmlOutput}
+                language="xml"
+              />
+            )}
+
+            {phpOutput && (
+              <CodeOutput
+                title="PHP Entity Class"
+                code={phpOutput}
+                language="php"
+              />
+            )}
+
+            {!xmlOutput && !phpOutput && !error && (
+              <div className="text-center py-12 text-gray-500">
+                <p>Enter a SQL CREATE TABLE statement and click "Generate Code" to see the results.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
