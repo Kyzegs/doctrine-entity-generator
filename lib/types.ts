@@ -47,6 +47,7 @@ export interface ColumnFieldMapping {
 }
 
 export interface Relationship {
+  id: string;
   field: string;
   type: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
   targetEntity: string;
