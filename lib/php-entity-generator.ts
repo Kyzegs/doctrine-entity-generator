@@ -87,10 +87,29 @@ class ${className} implements
     const traitProperties = this.getTraitProperties(selectedTraits, options);
     const traitMethods = this.getTraitMethods(selectedTraits, options);
     
+    // Generate ID field property first (if it exists and not provided by traits)
+    const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
+    if (idColumn && !traitProperties.has('id')) {
+      const visibility = options.publicProperties ? 'public' : 'private';
+      const nullable = idColumn.nullable ? '?' : '';
+      const defaultValue = idColumn.nullable ? ' = null' : '';
+      const phpType = ORMMappingUtils.mapToPHPType(idColumn, options);
+      
+      php += `
+
+    ${visibility} ${nullable}${phpType} $id${defaultValue};`;
+    }
+    
     // Generate properties based on the ORM mapping, excluding those provided by traits
+    // Only generate optional (nullable) properties here - required properties will be in constructor
     for (const field of ormMapping.fields) {
       // Skip if this property is already provided by a trait
       if (traitProperties.has(field.name)) {
+        continue;
+      }
+      
+      // Skip required (non-nullable) properties - they'll be in constructor
+      if (!field.nullable) {
         continue;
       }
       
@@ -98,81 +117,30 @@ class ${className} implements
       const nullable = field.nullable ? '?' : '';
       const defaultValue = field.nullable ? ' = null' : '';
       
-      php += `
+      // Handle relationship fields differently
+      if (field.isRelationship && field.relationship) {
+        const relationship = field.relationship;
+        const isCollection = relationship.type === 'one-to-many' || relationship.type === 'many-to-many';
+        const collectionType = isCollection ? 'Collection' : relationship.targetEntity;
+        
+        php += `
+
+    ${visibility} ${nullable}${collectionType} $${field.name}${defaultValue};`;
+      } else {
+        // Regular field
+        php += `
 
     ${visibility} ${nullable}${field.phpType} $${field.name}${defaultValue};`;
+      }
     }
 
-    // Add relationship properties
-    for (const relationship of options.relationships) {
-      const visibility = options.publicProperties ? 'public' : 'private';
-      
-      // Determine if the relationship should be nullable based on the SQL column
-      let nullable = '';
-      if (relationship.joinColumn) {
-        const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
-        if (correspondingColumn && correspondingColumn.nullable) {
-          nullable = '?';
-        }
-      }
-      
-      // For collection types, they're always nullable
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        nullable = '?';
-      }
-      
-      const collectionType = relationship.type === 'one-to-many' || relationship.type === 'many-to-many' ? 'Collection' : relationship.targetEntity;
-      
-      php += `
-
-    ${visibility} ${nullable}${collectionType} $${relationship.field};`;
-    }
+    // Relationship properties are now handled in the main field loop above
+    // This ensures they appear in the same order as the CREATE TABLE statement
 
 
     
-    // Add properties from custom traits (if any)
-    if (selectedTraits.length > 0) {
-      for (const traitName of selectedTraits) {
-        const trait = options.customTraits.find(t => t.name === traitName);
-        if (trait && trait.properties.length > 0) {
-          for (const property of trait.properties) {
-            const nullable = property.nullable ? '?' : '';
-            const defaultValue = property.nullable && property.defaultValue ? ` = ${property.defaultValue}` : '';
-            php += `
-
-    ${property.visibility} ${nullable}${property.type} $${property.name}${defaultValue};`;
-          }
-        }
-      }
-    }
-
-
-    
-    // Add methods from custom traits
-    if (selectedTraits.length > 0) {
-      for (const traitName of selectedTraits) {
-        const trait = options.customTraits.find(t => t.name === traitName);
-        if (trait && trait.methods.length > 0) {
-          for (const method of trait.methods) {
-            const params = method.parameters.map(param => {
-              const nullable = param.nullable ? '?' : '';
-              const defaultValue = param.defaultValue ? ` = ${param.defaultValue}` : '';
-              return `${nullable}${param.type} $${param.name}${defaultValue}`;
-            }).join(', ');
-            
-            const returnType = method.returnType === 'self' ? 'self' : method.returnType;
-            
-            php += `
-
-    ${method.visibility} function ${method.name}(${params}): ${returnType}
-    {
-        // Method implementation would be in the trait
-        // This is just a placeholder for the generated entity
-    }`;
-          }
-        }
-      }
-    }
+    // Trait properties and methods are already provided by the trait itself
+    // No need to duplicate them in the generated entity
 
     // Generate constructor
     php += this.generateConstructor(schema, options, traitProperties);
@@ -186,6 +154,23 @@ class ${className} implements
         return ScrambleCodeEnum::${scrambleCodeName};
     }`;
 
+    // Generate ID field getters and setters first (if enabled and not provided by traits)
+    if (options.generateGetters || options.generateSetters) {
+      const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
+      if (idColumn && !traitProperties.has('id')) {
+        const getterName = this.getGetterName(idColumn);
+        const setterName = 'setId';
+        
+        // Skip if getter or setter is already provided by a trait
+        if ((options.generateGetters && traitMethods.has(getterName)) || 
+            (options.generateSetters && traitMethods.has(setterName))) {
+          // Skip
+        } else {
+          php += this.generateGetterSetter(idColumn, schema, options);
+        }
+      }
+    }
+    
     // Generate getters and setters based on the ORM mapping, excluding those provided by traits
     if (options.generateGetters || options.generateSetters) {
       for (const field of ormMapping.fields) {
@@ -208,25 +193,22 @@ class ${className} implements
           continue;
         }
         
-        php += this.generateGetterSetter(column, schema, options);
+        // Handle relationship fields differently
+        if (field.isRelationship && field.relationship) {
+          // Skip required relationships - they'll be handled by constructor
+          if (!field.nullable) {
+            continue;
+          }
+          
+          php += this.generateRelationshipGetterSetter(field.relationship, options, schema);
+        } else {
+          php += this.generateGetterSetter(column, schema, options);
+        }
       }
     }
 
-    // Generate getters and setters for relationships, excluding those provided by traits
-    for (const relationship of options.relationships) {
-      if (options.generateGetters || options.generateSetters) {
-        const getterName = `get${ORMMappingUtils.toPascalCase(relationship.field)}`;
-        const setterName = `set${ORMMappingUtils.toPascalCase(relationship.field)}`;
-        
-        // Skip if getter or setter is already provided by a trait
-        if ((options.generateGetters && traitMethods.has(getterName)) || 
-            (options.generateSetters && traitMethods.has(setterName))) {
-          continue;
-        }
-        
-        php += this.generateRelationshipGetterSetter(relationship, options, schema);
-      }
-    }
+    // Relationship getters and setters are now handled in the main field loop above
+    // This ensures they appear in the same order as the CREATE TABLE statement
 
 
 
@@ -237,9 +219,9 @@ class ${className} implements
   }
 
   private static generateConstructor(schema: TableSchema, options: GenerationOptions, traitProperties?: Set<string>): string {
-    const constructorColumns = this.getConstructorColumns(schema, options, traitProperties);
+    const constructorData = this.getConstructorColumns(schema, options, traitProperties);
     
-    if (constructorColumns.length === 0) {
+    if (constructorData.columns.length === 0 && constructorData.relationships.length === 0) {
       return `
 
     public function __construct()
@@ -252,8 +234,18 @@ class ${className} implements
     public function __construct(`;
 
     const params: string[] = [];
-    for (const column of constructorColumns) {
+    
+    // Add required column parameters
+    for (const column of constructorData.columns) {
       const param = this.generateConstructorParameter(column, schema, options);
+      if (param) {
+        params.push(param);
+      }
+    }
+    
+    // Add required relationship parameters
+    for (const relationship of constructorData.relationships) {
+      const param = this.generateRelationshipConstructorParameter(relationship, options);
       if (param) {
         params.push(param);
       }
@@ -274,20 +266,30 @@ class ${className} implements
   ): string | null {
     const fieldName = ORMMappingUtils.getFieldName(column.name, options);
     
-    // Skip system columns
-    if (column.name === 'id' || column.autoIncrement) {
-      return null;
-    }
-
     // Skip _id columns that are configured as relationships
     if (column.name.endsWith('_id') && ORMMappingUtils.isConfiguredAsRelationship(column.name, options)) {
       return null;
     }
+    
     const phpType = ORMMappingUtils.mapToPHPType(column, options);
     const visibility = options.publicProperties ? 'public' : 'private';
     
     // Use constructor property promotion for required properties
     return `${visibility} ${phpType} $${fieldName}`;
+  }
+
+  private static generateRelationshipConstructorParameter(
+    relationship: Relationship, 
+    options: GenerationOptions
+  ): string | null {
+    const fieldName = relationship.field;
+    const targetEntity = relationship.targetEntity;
+    const isCollection = relationship.type === 'one-to-many' || relationship.type === 'many-to-many';
+    const collectionType = isCollection ? 'Collection' : targetEntity;
+    const visibility = options.publicProperties ? 'public' : 'private';
+    
+    // Use constructor property promotion for required relationships
+    return `${visibility} ${collectionType} $${fieldName}`;
   }
 
   private static getTraitProperties(selectedTraits: string[], options: GenerationOptions): Set<string> {
@@ -326,11 +328,6 @@ class ${className} implements
     options: GenerationOptions
   ): string {
     const fieldName = ORMMappingUtils.getFieldName(column.name, options);
-    
-    // Skip system columns
-    if (column.name === 'id' || column.autoIncrement) {
-      return '';
-    }
     
     const getterName = this.getGetterName(column);
     const phpType = ORMMappingUtils.mapToPHPType(column, options);
@@ -401,29 +398,43 @@ class ${className} implements
     return methods;
   }
 
-  private static getConstructorColumns(schema: TableSchema, options: GenerationOptions, traitProperties?: Set<string>): TableColumn[] {
-    return schema.columns.filter(column => {
-      // Skip ID and auto-increment columns
-      if (column.name === 'id' || column.autoIncrement) {
-        return false;
+  private static getConstructorColumns(schema: TableSchema, options: GenerationOptions, traitProperties?: Set<string>): { columns: TableColumn[], relationships: Relationship[] } {
+    // Use the ORM mapping to get fields in the correct order
+    const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
+    
+    const columns: TableColumn[] = [];
+    const relationships: Relationship[] = [];
+    
+    // Check if ID field should be in constructor (if it's required and not provided by traits)
+    const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
+    if (idColumn && !idColumn.nullable && !traitProperties?.has('id')) {
+      columns.unshift(idColumn); // Add ID at the beginning
+    }
+    
+    for (const field of ormMapping.fields) {
+      // Skip if this field is already provided by a trait
+      if (traitProperties && traitProperties.has(field.name)) {
+        continue;
       }
       
-      // Skip _id columns that are configured as relationships
-      if (column.name.endsWith('_id') && ORMMappingUtils.isConfiguredAsRelationship(column.name, options)) {
-        return false;
+      // Skip optional (nullable) fields - they go as class properties
+      if (field.nullable) {
+        continue;
       }
       
-      // Skip properties that are already provided by traits
-      if (traitProperties) {
-        const fieldName = ORMMappingUtils.getFieldName(column.name, options);
-        if (traitProperties.has(fieldName)) {
-          return false;
+      if (field.isRelationship && field.relationship) {
+        // This is a required relationship field
+        relationships.push(field.relationship);
+      } else {
+        // This is a required regular field, find the corresponding column
+        const column = schema.columns.find(col => ORMMappingUtils.getFieldName(col.name, options) === field.name);
+        if (column) {
+          columns.push(column);
         }
       }
-      
-      // Include only required (non-nullable) columns
-      return !column.nullable;
-    });
+    }
+
+    return { columns, relationships };
   }
 
 

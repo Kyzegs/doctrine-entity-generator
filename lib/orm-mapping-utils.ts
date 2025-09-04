@@ -12,6 +12,7 @@ export interface ORMFieldMapping {
   isTimestamp: boolean;
   isByField: boolean;
   isRelationship: boolean;
+  relationship?: any; // Store the full relationship object for relationship fields
 }
 
 export class ORMMappingUtils {
@@ -25,8 +26,9 @@ export class ORMMappingUtils {
   } {
     const fields: ORMFieldMapping[] = [];
     
-    // Process all columns to create field mappings
+    // Process all columns to create field mappings, maintaining original order
     for (const column of schema.columns) {
+      // Skip ID columns for regular field mapping - they're handled separately in Doctrine XML
       if (column.name === 'id' || column.autoIncrement) {
         continue;
       }
@@ -35,7 +37,28 @@ export class ORMMappingUtils {
       const isRelationship = column.name.endsWith('_id') && this.isConfiguredAsRelationship(column.name, options);
       
       if (isRelationship) {
-        continue; // Skip relationship columns as they're handled separately
+        // This is a relationship column, add it as a relationship field
+        const relationship = options.relationships?.find(r => r.joinColumn === column.name);
+        if (relationship) {
+          const isCollection = relationship.type === 'one-to-many' || relationship.type === 'many-to-many';
+          const collectionType = isCollection ? 'Collection' : relationship.targetEntity;
+          
+          fields.push({
+            name: relationship.field,
+            columnName: column.name,
+            doctrineType: 'relationship', // Special marker for relationships
+            phpType: collectionType,
+            nullable: column.nullable,
+            isRequired: !column.nullable,
+            length: undefined,
+            enumClass: undefined,
+            isTimestamp: false,
+            isByField: false,
+            isRelationship: true,
+            relationship: relationship // Store the full relationship object
+          });
+        }
+        continue;
       }
       
       const isTimestamp = false; // No more hardcoded timestamp detection
