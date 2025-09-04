@@ -37,26 +37,10 @@ export class ORMMappingUtils {
       const isRelationship = column.name.endsWith('_id') && this.isConfiguredAsRelationship(column.name, options);
       
       if (isRelationship) {
-        // This is a relationship column, add it as a relationship field
+        // This is a relationship column, add it to relationships array instead of fields
         const relationship = options.relationships?.find(r => r.joinColumn === column.name);
         if (relationship) {
-          const isCollection = relationship.type === 'one-to-many' || relationship.type === 'many-to-many';
-          const collectionType = isCollection ? 'Collection' : relationship.targetEntity;
-          
-          fields.push({
-            name: relationship.field,
-            columnName: column.name,
-            doctrineType: 'relationship', // Special marker for relationships
-            phpType: collectionType,
-            nullable: column.nullable,
-            isRequired: !column.nullable,
-            length: undefined,
-            enumClass: undefined,
-            isTimestamp: false,
-            isByField: false,
-            isRelationship: true,
-            relationship: relationship // Store the full relationship object
-          });
+          // Don't add to fields array - relationships are handled separately
         }
         continue;
       }
@@ -115,7 +99,22 @@ export class ORMMappingUtils {
       });
     }
     
-    return { fields, relationships: options.relationships || [] };
+    // Get relationships in the same order as they appear in the columns
+    const orderedRelationships: any[] = [];
+    for (const column of schema.columns) {
+      if (column.name === 'id' || column.autoIncrement) {
+        continue;
+      }
+      
+      if (column.name.endsWith('_id') && this.isConfiguredAsRelationship(column.name, options)) {
+        const relationship = options.relationships?.find(r => r.joinColumn === column.name);
+        if (relationship) {
+          orderedRelationships.push(relationship);
+        }
+      }
+    }
+    
+    return { fields, relationships: orderedRelationships };
   }
 
   /**

@@ -1,6 +1,7 @@
 'use client';
 
 import { GenerationOptions, ColumnFieldMapping, CustomDataType, Relationship, CustomTrait } from '@/lib/types';
+import { useState } from 'react';
 
 interface OptionsFormProps {
   options: GenerationOptions;
@@ -8,11 +9,66 @@ interface OptionsFormProps {
 }
 
 export function OptionsForm({ options, onChange }: OptionsFormProps) {
+  // Initialize all traits as collapsed by default
+  const [collapsedTraits, setCollapsedTraits] = useState<Set<string>>(() => {
+    const initialCollapsed = new Set<string>();
+    if (options.customTraits) {
+      options.customTraits.forEach(trait => initialCollapsed.add(trait.id));
+    }
+    return initialCollapsed;
+  });
+  const [draggedTraitId, setDraggedTraitId] = useState<string | null>(null);
+  
   const handleInputChange = (field: keyof GenerationOptions, value: string | boolean | ColumnFieldMapping[] | CustomDataType[] | Relationship[] | string[] | CustomTrait[]) => {
     onChange({
       ...options,
       [field]: value,
     });
+  };
+  
+  const toggleTraitCollapse = (traitId: string) => {
+    const newCollapsed = new Set(collapsedTraits);
+    if (newCollapsed.has(traitId)) {
+      newCollapsed.delete(traitId);
+    } else {
+      newCollapsed.add(traitId);
+    }
+    setCollapsedTraits(newCollapsed);
+  };
+  
+  const handleDragStart = (e: React.DragEvent, traitId: string) => {
+    setDraggedTraitId(traitId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  
+  const handleDrop = (e: React.DragEvent, targetTraitId: string) => {
+    e.preventDefault();
+    
+    if (!draggedTraitId || draggedTraitId === targetTraitId) {
+      return;
+    }
+    
+    const traits = [...(options.customTraits || [])];
+    const draggedIndex = traits.findIndex(t => t.id === draggedTraitId);
+    const targetIndex = traits.findIndex(t => t.id === targetTraitId);
+    
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      const [draggedTrait] = traits.splice(draggedIndex, 1);
+      traits.splice(targetIndex, 0, draggedTrait);
+      
+      handleInputChange('customTraits', traits);
+    }
+    
+    setDraggedTraitId(null);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedTraitId(null);
   };
 
   return (
@@ -537,6 +593,9 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
             };
             const newTraits = [...(options.customTraits || []), newTrait];
             handleInputChange('customTraits', newTraits);
+            
+            // Automatically collapse new traits
+            setCollapsedTraits(prev => new Set([...prev, newTrait.id]));
           }}
           className="mb-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
         >
@@ -546,20 +605,98 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
         {/* Custom Traits List */}
         <div className="space-y-4">
           {(options.customTraits || []).map((trait, traitIndex) => (
-            <div key={trait.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h5 className="font-medium text-gray-900">Trait {traitIndex + 1}</h5>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newTraits = (options.customTraits || []).filter((_, i) => i !== traitIndex);
-                    handleInputChange('customTraits', newTraits);
-                  }}
-                  className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
-                >
-                  Remove
-                </button>
+            <div
+              key={`drop-zone-${traitIndex}`}
+              className={`min-h-2 transition-all duration-200 ${
+                draggedTraitId && draggedTraitId !== trait.id 
+                  ? 'bg-blue-100 border-2 border-dashed border-blue-300 rounded' 
+                  : ''
+              }`}
+              onDragOver={handleDragOver}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedTraitId) {
+                  const traits = [...(options.customTraits || [])];
+                  const draggedIndex = traits.findIndex(t => t.id === draggedTraitId);
+                  if (draggedIndex !== -1) {
+                    const [draggedTrait] = traits.splice(draggedIndex, 1);
+                    traits.splice(traitIndex, 0, draggedTrait);
+                    handleInputChange('customTraits', traits);
+                  }
+                  setDraggedTraitId(null);
+                }
+              }}
+            />
+          ))}
+          {(options.customTraits || []).map((trait, traitIndex) => (
+            <div 
+              key={trait.id} 
+              className={`border border-gray-200 rounded-lg ${
+                draggedTraitId === trait.id ? 'opacity-50' : ''
+              }`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, trait.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, trait.id)}
+              onDragEnd={handleDragEnd}
+            >
+              {/* Trait Header - Always Visible */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center space-x-3">
+                  {/* Drag Handle */}
+                  <div className="cursor-move text-gray-400 hover:text-gray-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                    </svg>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => toggleTraitCollapse(trait.id)}
+                    className="text-gray-500 hover:text-gray-700 transition-transform duration-200"
+                  >
+                    <svg
+                      className={`w-5 h-5 transform transition-transform duration-200 ${
+                        collapsedTraits.has(trait.id) ? 'rotate-90' : ''
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  
+                  <h5 className="font-medium text-gray-900">
+                    {trait.name || `Trait ${traitIndex + 1}`}
+                  </h5>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">#{traitIndex + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newTraits = (options.customTraits || []).filter((_, i) => i !== traitIndex);
+                      handleInputChange('customTraits', newTraits);
+                      
+                      // Clean up collapsed state for removed trait
+                      setCollapsedTraits(prev => {
+                        const newCollapsed = new Set(prev);
+                        newCollapsed.delete(trait.id);
+                        return newCollapsed;
+                      });
+                    }}
+                    className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
+              
+              {/* Trait Content - Collapsible */}
+              {!collapsedTraits.has(trait.id) && (
+                <div className="p-4">
               
               {/* Trait Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -916,8 +1053,31 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
                   ))}
                 </div>
               </div>
+                </div>
+              )}
             </div>
           ))}
+          
+          {/* Drop zone at the end */}
+          <div
+            className={`min-h-2 transition-all duration-200 ${
+              draggedTraitId ? 'bg-blue-100 border-2 border-dashed border-blue-300 rounded' : ''
+            }`}
+            onDragOver={handleDragOver}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (draggedTraitId) {
+                const traits = [...(options.customTraits || [])];
+                const draggedIndex = traits.findIndex(t => t.id === draggedTraitId);
+                if (draggedIndex !== -1) {
+                  const [draggedTrait] = traits.splice(draggedIndex, 1);
+                  traits.push(draggedTrait);
+                  handleInputChange('customTraits', traits);
+                }
+                setDraggedTraitId(null);
+              }
+            }}
+          />
         </div>
       </div>
     </div>

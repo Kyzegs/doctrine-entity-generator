@@ -104,60 +104,8 @@ export class DoctrineXMLGenerator {
         </indexes>`;
     }
 
-    // Generate relationships
-    for (const relationship of options.relationships) {
-      const targetEntity = relationship.targetEntityNamespace 
-        ? `${relationship.targetEntityNamespace}\\${relationship.targetEntity}`
-        : `${options.namespace}\\${relationship.targetEntity}`;
-      
-      let relationshipXml = `
-        <${relationship.type} field="${relationship.field}" target-entity="${targetEntity}"`;
-      
-      if (relationship.fetch && relationship.fetch !== 'LAZY') {
-        relationshipXml += ` fetch="${relationship.fetch}"`;
-      }
-      
-      if (relationship.mappedBy) {
-        relationshipXml += ` mapped-by="${relationship.mappedBy}"`;
-      }
-      
-      if (relationship.inversedBy) {
-        relationshipXml += ` inversed-by="${relationship.inversedBy}"`;
-      }
-      
-      if (relationship.orphanRemoval) {
-        relationshipXml += ` orphan-removal="true"`;
-      }
-      
-      relationshipXml += `>`;
-      
-      // Add join-column for many-to-one and one-to-one relationships
-      if (relationship.joinColumn && (relationship.type === 'many-to-one' || relationship.type === 'one-to-one')) {
-        // Check if the corresponding SQL column is nullable
-        const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
-        const isNullable = correspondingColumn && correspondingColumn.nullable;
-        
-        relationshipXml += `
-            <join-column name="${relationship.joinColumn}"${isNullable ? ' nullable="true"' : ' nullable="false"'}/>`;
-      }
-      
-      // Add cascade operations
-      if (relationship.cascade && relationship.cascade.length > 0) {
-        relationshipXml += `
-            <cascade>`;
-        for (const cascadeType of relationship.cascade) {
-          relationshipXml += `
-                <cascade-${cascadeType}/>`;
-        }
-        relationshipXml += `
-            </cascade>`;
-      }
-      
-      relationshipXml += `
-        </${relationship.type}>`;
-      
-      xml += relationshipXml;
-    }
+    // Relationships are now handled in the main field loop above
+    // This ensures they appear in the same order as the CREATE TABLE statement
 
     xml += `
     </entity>

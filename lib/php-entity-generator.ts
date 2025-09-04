@@ -74,8 +74,12 @@ class ${className} implements
     php += `
 {`;
 
-    // Add selected traits
-    for (const traitName of selectedTraits) {
+    // Add selected traits in the same order as they appear in the UI
+    const selectedTraitsInOrder = (options.customTraits || [])
+      .filter(trait => selectedTraits.includes(trait.name))
+      .map(trait => trait.name);
+    
+    for (const traitName of selectedTraitsInOrder) {
       php += `
     use ${traitName};`;
     }
@@ -117,21 +121,48 @@ class ${className} implements
       const nullable = field.nullable ? '?' : '';
       const defaultValue = field.nullable ? ' = null' : '';
       
-      // Handle relationship fields differently
-      if (field.isRelationship && field.relationship) {
-        const relationship = field.relationship;
-        const isCollection = relationship.type === 'one-to-many' || relationship.type === 'many-to-many';
-        const collectionType = isCollection ? 'Collection' : relationship.targetEntity;
-        
-        php += `
-
-    ${visibility} ${nullable}${collectionType} $${field.name}${defaultValue};`;
-      } else {
-        // Regular field
-        php += `
+      // Regular field
+      php += `
 
     ${visibility} ${nullable}${field.phpType} $${field.name}${defaultValue};`;
+    }
+    
+    // Generate relationship properties in the same order as they appear in the CREATE TABLE
+    for (const relationship of ormMapping.relationships) {
+      // Skip if this relationship is already provided by a trait
+      if (traitProperties.has(relationship.field)) {
+        continue;
       }
+      
+      const visibility = options.publicProperties ? 'public' : 'private';
+      let nullable = '';
+      let isNullable = false;
+      
+      // Determine if the relationship should be nullable based on the SQL column
+      if (relationship.joinColumn) {
+        const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
+        if (correspondingColumn && correspondingColumn.nullable) {
+          nullable = '?';
+          isNullable = true;
+        }
+      }
+      
+      // For collection types, they're always nullable
+      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+        nullable = '?';
+        isNullable = true;
+      }
+      
+      // Skip required relationships - they'll be in constructor
+      if (!isNullable) {
+        continue;
+      }
+      
+      const collectionType = relationship.type === 'one-to-many' || relationship.type === 'many-to-many' ? 'Collection' : relationship.targetEntity;
+      
+      php += `
+
+    ${visibility} ${nullable}${collectionType} $${relationship.field};`;
     }
 
     // Relationship properties are now handled in the main field loop above
@@ -193,22 +224,31 @@ class ${className} implements
           continue;
         }
         
-        // Handle relationship fields differently
-        if (field.isRelationship && field.relationship) {
-          // Skip required relationships - they'll be handled by constructor
-          if (!field.nullable) {
-            continue;
-          }
-          
-          php += this.generateRelationshipGetterSetter(field.relationship, options, schema);
-        } else {
-          php += this.generateGetterSetter(column, schema, options);
-        }
+        // Regular field
+        php += this.generateGetterSetter(column, schema, options);
       }
+        }
+    
+    // Generate relationship getters and setters in the same order as they appear in the CREATE TABLE
+    for (const relationship of ormMapping.relationships) {
+      // Skip if this relationship is already provided by a trait
+      if (traitProperties.has(relationship.field)) {
+        continue;
+      }
+      
+      // Check for trait method conflicts for relationships
+      const getterName = `get${ORMMappingUtils.toPascalCase(relationship.field)}`;
+      const setterName = `set${ORMMappingUtils.toPascalCase(relationship.field)}`;
+      
+      // Skip if getter or setter is already provided by a trait
+      if ((options.generateGetters && traitMethods.has(getterName)) || 
+          (options.generateSetters && traitMethods.has(setterName))) {
+        continue;
+      }
+      
+      // Generate getters and setters for all relationships when enabled
+      php += this.generateRelationshipGetterSetter(relationship, options, schema);
     }
-
-    // Relationship getters and setters are now handled in the main field loop above
-    // This ensures they appear in the same order as the CREATE TABLE statement
 
 
 
@@ -310,9 +350,12 @@ class ${className} implements
   private static getTraitMethods(selectedTraits: string[], options: GenerationOptions): Set<string> {
     const traitMethods = new Set<string>();
     
-    for (const traitName of selectedTraits) {
-      const trait = options.customTraits.find(t => t.name === traitName);
-      if (trait && trait.methods.length > 0) {
+    // Get selected traits in the same order as they appear in the UI
+    const selectedTraitsInOrder = (options.customTraits || [])
+      .filter(trait => selectedTraits.includes(trait.name));
+    
+    for (const trait of selectedTraitsInOrder) {
+      if (trait.methods.length > 0) {
         for (const method of trait.methods) {
           traitMethods.add(method.name);
         }
