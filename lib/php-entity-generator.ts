@@ -1,6 +1,10 @@
-import { TableSchema, TableColumn, GenerationOptions } from './types';
+import { TableSchema, TableColumn, GenerationOptions, Relationship } from './types';
+import { ORMMappingUtils, ORMFieldMapping } from './orm-mapping-utils';
+
 
 export class PHPEntityGenerator {
+
+
   static generate(schema: TableSchema, options: GenerationOptions): string {
     const entityName = this.getEntityName(schema.name, options);
     const className = `${options.entityPrefix}${entityName}${options.entitySuffix}`;
@@ -11,40 +15,49 @@ declare(strict_types=1);
 
 namespace ${options.namespace};
 
-use AntiCorruptionLayer\\Tinpay\\Helper\\EntityTrait;
 use App\\Shared\\Domain\\Enum\\ScrambleCodeEnum;
 use App\\Shared\\Domain\\Model\\Identity\\ScrambleCodeEntityInterface;
-use DateTimeImmutable;`;
+use DateTimeImmutable;
+use Doctrine\\Common\\Collections\\Collection;
+use Doctrine\\Common\\Collections\\ArrayCollection;`;
 
-    // Add trait imports based on timestamp columns
-    const timestampColumns = schema.columns.filter(col => this.isSpecialTimestampColumn(col.name));
-    const hasCreated = timestampColumns.some(col => col.name === 'created');
-    const hasDeleted = timestampColumns.some(col => col.name === 'deleted');
+    // Add trait imports based on selected traits
+    const selectedTraits = options.selectedTraits || [];
+    const traitImports = new Set<string>();
+    const traitInterfaces = new Set<string>();
     
-    if (hasCreated) {
-      php += `
-use PayNL\\UserActions\\Contract\\CreatedAtInterface;
-use PayNL\\UserActions\\Contract\\CreatedByInterface;
-use PayNL\\UserActions\\Trait\\CreatedAtTrait;
-use PayNL\\UserActions\\Trait\\CreatedByTrait;`;
+    for (const traitName of selectedTraits) {
+      const trait = options.customTraits.find(t => t.name === traitName);
+      if (trait) {
+        traitImports.add(`use ${trait.namespace}\\${trait.name};`);
+        trait.requiredInterfaces.forEach(iface => traitInterfaces.add(iface));
+      }
     }
     
-    if (hasDeleted) {
+    // Add relationship imports
+    for (const relationship of options.relationships) {
+      const targetEntity = relationship.targetEntityNamespace 
+        ? relationship.targetEntityNamespace
+        : options.namespace;
       php += `
-use PayNL\\UserActions\\Contract\\DeletedAtInterface;
-use PayNL\\UserActions\\Contract\\DeletedByInterface;
-use PayNL\\UserActions\\Trait\\DeletedAtTrait;
-use PayNL\\UserActions\\Trait\\DeletedByTrait;`;
+use ${targetEntity}\\${relationship.targetEntity};`;
     }
+    
+    // Add trait imports
+    for (const importStatement of traitImports) {
+      php += `
+${importStatement}`;
+    }
+    
+
 
     // Add relationship imports
-    const foreignKeyConstraints = schema.constraints.filter(c => c.type === 'FOREIGN KEY');
-    for (const constraint of foreignKeyConstraints) {
-      if (constraint.referencedTable) {
-        const relatedEntityName = this.getEntityName(constraint.referencedTable, options);
-        php += `
-use ${options.namespace}\\${relatedEntityName};`;
-      }
+    for (const relationship of options.relationships) {
+      const targetEntity = relationship.targetEntityNamespace 
+        ? relationship.targetEntityNamespace
+        : options.namespace;
+      php += `
+use ${targetEntity}\\${relationship.targetEntity};`;
     }
 
     php += `
@@ -52,62 +65,117 @@ use ${options.namespace}\\${relatedEntityName};`;
 class ${className} implements
     ScrambleCodeEntityInterface`;
 
-    if (hasCreated) {
+    // Add required interfaces from selected traits
+    for (const interfaceName of traitInterfaces) {
       php += `,
-    CreatedAtInterface,
-    CreatedByInterface`;
-    }
-    
-    if (hasDeleted) {
-      php += `,
-    DeletedAtInterface,
-    DeletedByInterface`;
+    ${interfaceName}`;
     }
 
     php += `
-{
-    use EntityTrait;`;
+{`;
 
-    if (hasCreated) {
+    // Add selected traits
+    for (const traitName of selectedTraits) {
       php += `
-    use CreatedAtTrait;
-    use CreatedByTrait;`;
-    }
-    
-    if (hasDeleted) {
-      php += `
-    use DeletedAtTrait;
-    use DeletedByTrait;`;
+    use ${traitName};`;
     }
 
-    // Add private properties for nullable timestamp fields
-    const nullableTimestampColumns = timestampColumns.filter(col => 
-      col.nullable && !['created', 'deleted'].includes(col.name)
-    );
+    // Create ORM mapping for property generation
+    const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
     
-    for (const column of nullableTimestampColumns) {
-      const fieldName = this.getTimestampFieldName(column.name);
+    // Get properties and methods already provided by traits
+    const traitProperties = this.getTraitProperties(selectedTraits, options);
+    const traitMethods = this.getTraitMethods(selectedTraits, options);
+    
+    // Generate properties based on the ORM mapping, excluding those provided by traits
+    for (const field of ormMapping.fields) {
+      // Skip if this property is already provided by a trait
+      if (traitProperties.has(field.name)) {
+        continue;
+      }
+      
+      const visibility = options.publicProperties ? 'public' : 'private';
+      const nullable = field.nullable ? '?' : '';
+      const defaultValue = field.nullable ? ' = null' : '';
+      
       php += `
 
-    private ?DateTimeImmutable $${fieldName} = null;`;
+    ${visibility} ${nullable}${field.phpType} $${field.name}${defaultValue};`;
     }
 
-    // Add private properties for nullable _by fields
-    const byColumns = schema.columns.filter(col => 
-      col.name.endsWith('_by') && 
-      col.nullable && 
-      !['created_by', 'deleted_by'].includes(col.name)
-    );
-    
-    for (const column of byColumns) {
-      const fieldName = this.toCamelCase(column.name);
+    // Add relationship properties
+    for (const relationship of options.relationships) {
+      const visibility = options.publicProperties ? 'public' : 'private';
+      
+      // Determine if the relationship should be nullable based on the SQL column
+      let nullable = '';
+      if (relationship.joinColumn) {
+        const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
+        if (correspondingColumn && correspondingColumn.nullable) {
+          nullable = '?';
+        }
+      }
+      
+      // For collection types, they're always nullable
+      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+        nullable = '?';
+      }
+      
+      const collectionType = relationship.type === 'one-to-many' || relationship.type === 'many-to-many' ? 'Collection' : relationship.targetEntity;
+      
       php += `
 
-    private ?string $${fieldName} = null;`;
+    ${visibility} ${nullable}${collectionType} $${relationship.field};`;
+    }
+
+
+    
+    // Add properties from custom traits (if any)
+    if (selectedTraits.length > 0) {
+      for (const traitName of selectedTraits) {
+        const trait = options.customTraits.find(t => t.name === traitName);
+        if (trait && trait.properties.length > 0) {
+          for (const property of trait.properties) {
+            const nullable = property.nullable ? '?' : '';
+            const defaultValue = property.nullable && property.defaultValue ? ` = ${property.defaultValue}` : '';
+            php += `
+
+    ${property.visibility} ${nullable}${property.type} $${property.name}${defaultValue};`;
+          }
+        }
+      }
+    }
+
+
+    
+    // Add methods from custom traits
+    if (selectedTraits.length > 0) {
+      for (const traitName of selectedTraits) {
+        const trait = options.customTraits.find(t => t.name === traitName);
+        if (trait && trait.methods.length > 0) {
+          for (const method of trait.methods) {
+            const params = method.parameters.map(param => {
+              const nullable = param.nullable ? '?' : '';
+              const defaultValue = param.defaultValue ? ` = ${param.defaultValue}` : '';
+              return `${nullable}${param.type} $${param.name}${defaultValue}`;
+            }).join(', ');
+            
+            const returnType = method.returnType === 'self' ? 'self' : method.returnType;
+            
+            php += `
+
+    ${method.visibility} function ${method.name}(${params}): ${returnType}
+    {
+        // Method implementation would be in the trait
+        // This is just a placeholder for the generated entity
+    }`;
+          }
+        }
+      }
     }
 
     // Generate constructor
-    php += this.generateConstructor(schema, options);
+    php += this.generateConstructor(schema, options, traitProperties);
 
     // Generate getScrambleCode method
     const scrambleCodeName = schema.name.toUpperCase();
@@ -118,21 +186,49 @@ class ${className} implements
         return ScrambleCodeEnum::${scrambleCodeName};
     }`;
 
-    // Generate getters and setters for constructor parameters
-    const constructorColumns = this.getConstructorColumns(schema);
-    for (const column of constructorColumns) {
-      php += this.generateGetterSetter(column, schema, options);
+    // Generate getters and setters based on the ORM mapping, excluding those provided by traits
+    if (options.generateGetters || options.generateSetters) {
+      for (const field of ormMapping.fields) {
+        // Skip if this property is already provided by a trait
+        if (traitProperties.has(field.name)) {
+          continue;
+        }
+        
+        // Find the corresponding column for additional metadata
+        const column = schema.columns.find(col => ORMMappingUtils.getFieldName(col.name, options) === field.name);
+        if (!column) continue;
+        
+        // Generate getter/setter for this field, excluding methods already provided by traits
+        const getterName = this.getGetterName(column);
+        const setterName = `set${ORMMappingUtils.toPascalCase(field.name)}`;
+        
+        // Skip if getter or setter is already provided by a trait
+        if ((options.generateGetters && traitMethods.has(getterName)) || 
+            (options.generateSetters && traitMethods.has(setterName))) {
+          continue;
+        }
+        
+        php += this.generateGetterSetter(column, schema, options);
+      }
     }
 
-    // Generate getters and setters for nullable timestamp fields
-    for (const column of nullableTimestampColumns) {
-      php += this.generateTimestampGetterSetter(column);
+    // Generate getters and setters for relationships, excluding those provided by traits
+    for (const relationship of options.relationships) {
+      if (options.generateGetters || options.generateSetters) {
+        const getterName = `get${ORMMappingUtils.toPascalCase(relationship.field)}`;
+        const setterName = `set${ORMMappingUtils.toPascalCase(relationship.field)}`;
+        
+        // Skip if getter or setter is already provided by a trait
+        if ((options.generateGetters && traitMethods.has(getterName)) || 
+            (options.generateSetters && traitMethods.has(setterName))) {
+          continue;
+        }
+        
+        php += this.generateRelationshipGetterSetter(relationship, options, schema);
+      }
     }
 
-    // Generate getters and setters for nullable _by fields
-    for (const column of byColumns) {
-      php += this.generateByFieldGetterSetter(column);
-    }
+
 
     php += `
 }`;
@@ -140,8 +236,8 @@ class ${className} implements
     return php;
   }
 
-  private static generateConstructor(schema: TableSchema, options: GenerationOptions): string {
-    const constructorColumns = this.getConstructorColumns(schema);
+  private static generateConstructor(schema: TableSchema, options: GenerationOptions, traitProperties?: Set<string>): string {
+    const constructorColumns = this.getConstructorColumns(schema, options, traitProperties);
     
     if (constructorColumns.length === 0) {
       return `
@@ -176,29 +272,52 @@ class ${className} implements
     schema: TableSchema, 
     options: GenerationOptions
   ): string | null {
-    // Check if this is a foreign key column
-    const foreignKeyConstraint = schema.constraints.find(c => 
-      c.type === 'FOREIGN KEY' && c.columns.includes(column.name)
-    );
-
-    if (foreignKeyConstraint && foreignKeyConstraint.referencedTable) {
-      const fieldName = this.getRelationshipFieldName(column.name);
-      const relatedEntityName = this.getEntityName(foreignKeyConstraint.referencedTable, options);
-      return `private ${relatedEntityName} $${fieldName}`;
-    }
-
-    // Skip special columns handled by traits
-    if (this.isSpecialTimestampColumn(column.name) || 
-        column.name.endsWith('_by') || 
-        column.name === 'id' || 
-        column.autoIncrement) {
+    const fieldName = ORMMappingUtils.getFieldName(column.name, options);
+    
+    // Skip system columns
+    if (column.name === 'id' || column.autoIncrement) {
       return null;
     }
 
-    const fieldName = this.toCamelCase(column.name);
-    const phpType = this.mapToPHPType(column);
+    // Skip _id columns that are configured as relationships
+    if (column.name.endsWith('_id') && ORMMappingUtils.isConfiguredAsRelationship(column.name, options)) {
+      return null;
+    }
+    const phpType = ORMMappingUtils.mapToPHPType(column, options);
+    const visibility = options.publicProperties ? 'public' : 'private';
     
-    return `private ${phpType} $${fieldName}`;
+    // Use constructor property promotion for required properties
+    return `${visibility} ${phpType} $${fieldName}`;
+  }
+
+  private static getTraitProperties(selectedTraits: string[], options: GenerationOptions): Set<string> {
+    const traitProperties = new Set<string>();
+    
+    for (const traitName of selectedTraits) {
+      const trait = options.customTraits.find(t => t.name === traitName);
+      if (trait && trait.properties.length > 0) {
+        for (const property of trait.properties) {
+          traitProperties.add(property.name);
+        }
+      }
+    }
+    
+    return traitProperties;
+  }
+
+  private static getTraitMethods(selectedTraits: string[], options: GenerationOptions): Set<string> {
+    const traitMethods = new Set<string>();
+    
+    for (const traitName of selectedTraits) {
+      const trait = options.customTraits.find(t => t.name === traitName);
+      if (trait && trait.methods.length > 0) {
+        for (const method of trait.methods) {
+          traitMethods.add(method.name);
+        }
+      }
+    }
+    
+    return traitMethods;
   }
 
   private static generateGetterSetter(
@@ -206,221 +325,143 @@ class ${className} implements
     schema: TableSchema, 
     options: GenerationOptions
   ): string {
-    // Check if this is a foreign key column
-    const foreignKeyConstraint = schema.constraints.find(c => 
-      c.type === 'FOREIGN KEY' && c.columns.includes(column.name)
-    );
-
-    if (foreignKeyConstraint && foreignKeyConstraint.referencedTable) {
-      return this.generateRelationshipGetterSetter(column, foreignKeyConstraint, options);
-    }
-
-    // Skip special columns handled by traits
-    if (this.isSpecialTimestampColumn(column.name) || 
-        column.name.endsWith('_by') || 
-        column.name === 'id' || 
-        column.autoIncrement) {
+    const fieldName = ORMMappingUtils.getFieldName(column.name, options);
+    
+    // Skip system columns
+    if (column.name === 'id' || column.autoIncrement) {
       return '';
     }
-
-    const fieldName = this.toCamelCase(column.name);
+    
     const getterName = this.getGetterName(column);
-    const phpType = this.mapToPHPType(column);
-    const pascalFieldName = this.toPascalCase(fieldName);
+    const phpType = ORMMappingUtils.mapToPHPType(column, options);
+    const pascalFieldName = ORMMappingUtils.toPascalCase(fieldName);
 
-    let methods = `
+    let methods = '';
+
+    if (options.generateGetters) {
+      methods += `
 
     public function ${getterName}(): ${phpType}
     {
         return $this->${fieldName};
+    }`;
     }
 
-    public function set${pascalFieldName}(${phpType} $${fieldName}): self
-    {
-        $this->${fieldName} = $${fieldName};
+    if (options.generateSetters) {
+      const returnType = options.generateFluentSetters ? 'self' : 'void';
+      const returnStatement = options.generateFluentSetters ? '\n\n        return $this;' : '';
+      
+      methods += `
 
-        return $this;
+    public function set${pascalFieldName}(${phpType} $${fieldName}): ${returnType}
+    {
+        $this->${fieldName} = $${fieldName};${returnStatement}
     }`;
+    }
 
     return methods;
   }
 
-  private static generateRelationshipGetterSetter(
-    column: TableColumn,
-    foreignKeyConstraint: any,
-    options: GenerationOptions
-  ): string {
-    const fieldName = this.getRelationshipFieldName(column.name);
-    const relatedEntityName = this.getEntityName(foreignKeyConstraint.referencedTable, options);
-    const pascalFieldName = this.toPascalCase(fieldName);
 
-    return `
 
-    public function get${pascalFieldName}(): ${relatedEntityName}
+
+
+
+
+  private static generateRelationshipGetterSetter(relationship: Relationship, options: GenerationOptions, schema: TableSchema): string {
+    const fieldName = relationship.field;
+    const pascalFieldName = ORMMappingUtils.toPascalCase(fieldName);
+    const targetEntity = relationship.targetEntity;
+    const isCollection = relationship.type === 'one-to-many' || relationship.type === 'many-to-many';
+    const collectionType = isCollection ? 'Collection' : targetEntity;
+
+    let methods = '';
+
+    if (options.generateGetters) {
+      methods += `
+
+    public function get${pascalFieldName}(): ${isCollection ? 'Collection' : targetEntity}
     {
         return $this->${fieldName};
+    }`;
     }
 
-    public function set${pascalFieldName}(${relatedEntityName} $${fieldName}): self
-    {
-        $this->${fieldName} = $${fieldName};
+    if (options.generateSetters) {
+      const returnType = options.generateFluentSetters ? 'self' : 'void';
+      const returnStatement = options.generateFluentSetters ? '\n\n        return $this;' : '';
+      
+      methods += `
 
-        return $this;
+    public function set${pascalFieldName}(${isCollection ? 'Collection' : targetEntity} $${fieldName}): ${returnType}
+    {
+        $this->${fieldName} = $${fieldName};${returnStatement}
     }`;
-  }
-
-  private static generateTimestampGetterSetter(column: TableColumn): string {
-    const fieldName = this.getTimestampFieldName(column.name);
-    const pascalFieldName = this.toPascalCase(fieldName);
-
-    return `
-
-    public function get${pascalFieldName}(): ?DateTimeImmutable
-    {
-        return $this->${fieldName};
     }
 
-    public function set${pascalFieldName}(?DateTimeImmutable $${fieldName} = null): self
-    {
-        $this->${fieldName} = $${fieldName};
-
-        return $this;
-    }`;
+    return methods;
   }
 
-  private static generateByFieldGetterSetter(column: TableColumn): string {
-    const fieldName = this.toCamelCase(column.name);
-    const pascalFieldName = this.toPascalCase(fieldName);
-
-    return `
-
-    public function get${pascalFieldName}(): ?string
-    {
-        return $this->${fieldName};
-    }
-
-    public function set${pascalFieldName}(?string $${fieldName} = null): self
-    {
-        $this->${fieldName} = $${fieldName};
-
-        return $this;
-    }`;
-  }
-
-  private static getConstructorColumns(schema: TableSchema): TableColumn[] {
+  private static getConstructorColumns(schema: TableSchema, options: GenerationOptions, traitProperties?: Set<string>): TableColumn[] {
     return schema.columns.filter(column => {
       // Skip ID and auto-increment columns
       if (column.name === 'id' || column.autoIncrement) {
         return false;
       }
       
-      // Skip special timestamp columns handled by traits
-      if (this.isSpecialTimestampColumn(column.name)) {
+      // Skip _id columns that are configured as relationships
+      if (column.name.endsWith('_id') && ORMMappingUtils.isConfiguredAsRelationship(column.name, options)) {
         return false;
       }
       
-      // Skip nullable _by columns (they're handled separately)
-      if (column.name.endsWith('_by') && column.nullable) {
-        return false;
+      // Skip properties that are already provided by traits
+      if (traitProperties) {
+        const fieldName = ORMMappingUtils.getFieldName(column.name, options);
+        if (traitProperties.has(fieldName)) {
+          return false;
+        }
       }
       
-      // Include required columns and foreign key columns
-      return !column.nullable || this.isForeignKeyColumn(column.name, schema);
+      // Include only required (non-nullable) columns
+      return !column.nullable;
     });
   }
 
-  private static mapToPHPType(column: TableColumn): string {
-    const type = column.type.toLowerCase();
-    
-    switch (type) {
-      case 'int':
-      case 'integer':
-        return 'int';
-      case 'varchar':
-      case 'char':
-      case 'text':
-      case 'longtext':
-      case 'mediumtext':
-        return 'string';
-      case 'tinyint':
-        if (column.length === 1) {
-          return 'bool';
-        }
-        return 'int';
-      case 'datetime':
-      case 'timestamp':
-        return 'DateTimeImmutable';
-      case 'date':
-        return 'DateTimeImmutable';
-      case 'decimal':
-      case 'numeric':
-        return 'string'; // Often handled as string to avoid precision issues
-      case 'float':
-      case 'double':
-        return 'float';
-      case 'json':
-        return 'array';
-      default:
-        return 'string';
-    }
-  }
+
+
+
+
+
+
+
 
   private static getGetterName(column: TableColumn): string {
-    const fieldName = this.toCamelCase(column.name);
+    const fieldName = ORMMappingUtils.toCamelCase(column.name);
     
     // Use 'is' prefix for boolean fields
     if (column.type.toLowerCase() === 'tinyint' && column.length === 1) {
-      return `is${this.toPascalCase(fieldName)}`;
+      return `is${ORMMappingUtils.toPascalCase(fieldName)}`;
     }
     
-    return `get${this.toPascalCase(fieldName)}`;
+    return `get${ORMMappingUtils.toPascalCase(fieldName)}`;
   }
 
-  private static isForeignKeyColumn(columnName: string, schema: TableSchema): boolean {
-    return schema.constraints.some(constraint => 
-      constraint.type === 'FOREIGN KEY' && 
-      constraint.columns.includes(columnName)
-    );
-  }
 
-  private static isSpecialTimestampColumn(columnName: string): boolean {
-    const timestampPatterns = ['created', 'sent', 'received', 'deleted', 'updated'];
-    return timestampPatterns.some(pattern => 
-      columnName === pattern || 
-      columnName.startsWith(pattern + '_') ||
-      columnName.endsWith('_' + pattern)
-    );
-  }
 
-  private static getTimestampFieldName(columnName: string): string {
-    // Convert timestamp columns to camelCase with 'At' suffix
-    if (columnName === 'created') return 'createdAt';
-    if (columnName === 'sent') return 'sentAt';
-    if (columnName === 'received') return 'receivedAt';
-    if (columnName === 'deleted') return 'deletedAt';
-    if (columnName === 'updated') return 'updatedAt';
-    
-    return this.toCamelCase(columnName);
-  }
 
-  private static getRelationshipFieldName(columnName: string): string {
-    // Remove _id suffix and convert to camelCase
-    const baseName = columnName.replace(/_id$/, '');
-    return this.toCamelCase(baseName);
-  }
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
     // Convert table name to PascalCase entity name
-    const baseName = this.toPascalCase(tableName);
+    const baseName = ORMMappingUtils.toPascalCase(tableName);
     return `${options.entityPrefix}${baseName}${options.entitySuffix}`;
   }
 
-  private static toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
 
-  private static toPascalCase(str: string): string {
-    const camelCase = this.toCamelCase(str);
-    return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
-  }
-}
+
+
+
+
+
+
+
+
+} 

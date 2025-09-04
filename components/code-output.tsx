@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface CodeOutputProps {
   title: string;
@@ -21,6 +23,20 @@ export function CodeOutput({ title, code, language }: CodeOutputProps) {
     }
   };
 
+  // Map language prop to syntax highlighter language
+  const getLanguage = (lang: string) => {
+    switch (lang.toLowerCase()) {
+      case 'xml':
+        return 'xml';
+      case 'php':
+        return 'php';
+      case 'sql':
+        return 'sql';
+      default:
+        return 'text';
+    }
+  };
+
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
@@ -32,10 +48,21 @@ export function CodeOutput({ title, code, language }: CodeOutputProps) {
           {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
-      <div className="p-4 bg-gray-900 text-gray-100 overflow-x-auto">
-        <pre className="text-sm">
-          <code className={`language-${language}`}>{code}</code>
-        </pre>
+      <div className="overflow-x-auto">
+        <SyntaxHighlighter
+          language={getLanguage(language)}
+          style={tomorrow}
+          customStyle={{
+            margin: 0,
+            borderRadius: 0,
+            fontSize: '0.875rem',
+            lineHeight: '1.5',
+          }}
+          showLineNumbers={true}
+          wrapLines={true}
+        >
+          {code}
+        </SyntaxHighlighter>
       </div>
     </div>
   );

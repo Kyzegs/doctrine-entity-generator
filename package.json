@@ -8,10 +8,15 @@
     "start": "next start"
   },
   "dependencies": {
+    "@types/prismjs": "^1.26.5",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "fast-xml-parser": "^5.2.5",
     "next": "15.5.2",
     "node-sql-parser": "^5.3.12",
+    "prismjs": "^1.30.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-syntax-highlighter": "^15.6.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

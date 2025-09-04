@@ -1,9 +1,13 @@
 import { TableSchema, TableColumn, GenerationOptions } from './types';
+import { ORMMappingUtils } from './orm-mapping-utils';
 
 export class DoctrineXMLGenerator {
   static generate(schema: TableSchema, options: GenerationOptions): string {
     const entityName = this.getEntityName(schema.name, options);
     const entityClass = `${options.namespace}\\${entityName}`;
+    
+    // Create ORM mapping for field generation
+    const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
     
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <doctrine-mapping
@@ -26,22 +30,64 @@ export class DoctrineXMLGenerator {
         </id>`;
     }
 
-    // Generate regular fields
-    const regularColumns = schema.columns.filter(col => 
-      col.name !== 'id' && 
-      !col.autoIncrement && 
-      !this.isForeignKeyColumn(col.name, schema) &&
-      !this.isSpecialTimestampColumn(col.name)
-    );
-
-    for (const column of regularColumns) {
-      xml += this.generateFieldXML(column);
+    // Generate all fields based on the ORM mapping
+    for (const field of ormMapping.fields) {
+      xml += this.generateFieldXMLFromMapping(field, options);
     }
-
-    // Generate special timestamp fields
-    const timestampColumns = schema.columns.filter(col => this.isSpecialTimestampColumn(col.name));
-    for (const column of timestampColumns) {
-      xml += this.generateTimestampFieldXML(column);
+    
+    // Generate relationships
+    for (const relationship of ormMapping.relationships) {
+      const targetEntity = relationship.targetEntityNamespace 
+        ? `${relationship.targetEntityNamespace}\\${relationship.targetEntity}`
+        : `${options.namespace}\\${relationship.targetEntity}`;
+      
+      let relationshipXml = `
+        <${relationship.type} field="${relationship.field}" target-entity="${targetEntity}"`;
+      
+      if (relationship.fetch && relationship.fetch !== 'LAZY') {
+        relationshipXml += ` fetch="${relationship.fetch}"`;
+      }
+      
+      if (relationship.mappedBy) {
+        relationshipXml += ` mapped-by="${relationship.mappedBy}"`;
+      }
+      
+      if (relationship.inversedBy) {
+        relationshipXml += ` inversed-by="${relationship.inversedBy}"`;
+      }
+      
+      if (relationship.orphanRemoval) {
+        relationshipXml += ` orphan-removal="true"`;
+      }
+      
+      relationshipXml += `>`;
+      
+      // Add join-column for many-to-one and one-to-one relationships
+      if (relationship.joinColumn && (relationship.type === 'many-to-one' || relationship.type === 'one-to-one')) {
+        // Check if the corresponding SQL column is nullable
+        const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
+        const isNullable = correspondingColumn && correspondingColumn.nullable;
+        
+        relationshipXml += `
+            <join-column name="${relationship.joinColumn}"${isNullable ? ' nullable="true"' : ' nullable="false"'}/>`;
+      }
+      
+      // Add cascade operations
+      if (relationship.cascade && relationship.cascade.length > 0) {
+        relationshipXml += `
+            <cascade>`;
+        for (const cascadeType of relationship.cascade) {
+          relationshipXml += `
+                <cascade-${cascadeType}/>`;
+        }
+        relationshipXml += `
+            </cascade>`;
+      }
+      
+      relationshipXml += `
+        </${relationship.type}>`;
+      
+      xml += relationshipXml;
     }
 
     // Generate indexes
@@ -59,14 +105,58 @@ export class DoctrineXMLGenerator {
     }
 
     // Generate relationships
-    const foreignKeyConstraints = schema.constraints.filter(c => c.type === 'FOREIGN KEY');
-    for (const constraint of foreignKeyConstraints) {
-      if (constraint.referencedTable && constraint.columns.length === 1) {
-        const fieldName = this.getRelationshipFieldName(constraint.columns[0]);
-        const targetEntity = this.getEntityName(constraint.referencedTable, options);
-        xml += `
-        <many-to-one field="${fieldName}" target-entity="${options.namespace}\\${targetEntity}"/>`;
+    for (const relationship of options.relationships) {
+      const targetEntity = relationship.targetEntityNamespace 
+        ? `${relationship.targetEntityNamespace}\\${relationship.targetEntity}`
+        : `${options.namespace}\\${relationship.targetEntity}`;
+      
+      let relationshipXml = `
+        <${relationship.type} field="${relationship.field}" target-entity="${targetEntity}"`;
+      
+      if (relationship.fetch && relationship.fetch !== 'LAZY') {
+        relationshipXml += ` fetch="${relationship.fetch}"`;
       }
+      
+      if (relationship.mappedBy) {
+        relationshipXml += ` mapped-by="${relationship.mappedBy}"`;
+      }
+      
+      if (relationship.inversedBy) {
+        relationshipXml += ` inversed-by="${relationship.inversedBy}"`;
+      }
+      
+      if (relationship.orphanRemoval) {
+        relationshipXml += ` orphan-removal="true"`;
+      }
+      
+      relationshipXml += `>`;
+      
+      // Add join-column for many-to-one and one-to-one relationships
+      if (relationship.joinColumn && (relationship.type === 'many-to-one' || relationship.type === 'one-to-one')) {
+        // Check if the corresponding SQL column is nullable
+        const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
+        const isNullable = correspondingColumn && correspondingColumn.nullable;
+        
+        relationshipXml += `
+            <join-column name="${relationship.joinColumn}"${isNullable ? ' nullable="true"' : ' nullable="false"'}/>`;
+      }
+      
+      // Add cascade operations
+      if (relationship.cascade && relationship.cascade.length > 0) {
+        relationshipXml += `
+            <cascade>`;
+        for (const cascadeType of relationship.cascade) {
+          relationshipXml += `
+                <cascade-${cascadeType}/>`;
+        }
+        relationshipXml += `
+            </cascade>`;
+      }
+      
+      relationshipXml += `
+        </${relationship.type}>`;
+      
+      xml += relationshipXml;
     }
 
     xml += `
@@ -76,27 +166,35 @@ export class DoctrineXMLGenerator {
     return xml;
   }
 
-  private static generateFieldXML(column: TableColumn): string {
-    const fieldName = this.toCamelCase(column.name);
-    const doctrineType = this.mapToDoctrineType(column);
-    
+  private static generateFieldXMLFromMapping(field: any, options: GenerationOptions): string {
     let xml = `
-        <field name="${fieldName}"`;
+        <field name="${field.name}"`;
     
-    if (column.name !== fieldName) {
-      xml += ` column="${column.name}"`;
+    // Only include column attribute if explicitly requested or if there's a custom mapping with a column specified
+    const customMapping = options.columnFieldMappings.find(mapping => mapping.field === field.name);
+    const shouldIncludeColumn = options.explicitlyDefineColumns || (customMapping && customMapping.column);
+    
+    if (shouldIncludeColumn) {
+      // Use the custom mapping column if it exists, otherwise use the field's column name
+      const columnName = customMapping?.column || field.columnName;
+      xml += ` column="${columnName}"`;
     }
     
-    if (doctrineType !== 'string') {
-      xml += ` type="${doctrineType}"`;
+    if (field.doctrineType !== 'string') {
+      xml += ` type="${field.doctrineType}"`;
     }
     
-    if (column.length) {
-      xml += ` length="${column.length}"`;
+    if (field.length) {
+      xml += ` length="${field.length}"`;
     }
     
-    if (column.nullable) {
+    if (field.nullable) {
       xml += ` nullable="true"`;
+    }
+    
+    // Add enum class if specified
+    if (field.enumClass) {
+      xml += ` enum-type="${field.enumClass}"`;
     }
     
     xml += `/>`;
@@ -104,110 +202,13 @@ export class DoctrineXMLGenerator {
     return xml;
   }
 
-  private static generateTimestampFieldXML(column: TableColumn): string {
-    const fieldName = this.getTimestampFieldName(column.name);
-    
-    let xml = `
-        <field name="${fieldName}" column="${column.name}" type="timestamp"`;
-    
-    if (column.nullable) {
-      xml += ` nullable="true"`;
-    }
-    
-    xml += `/>`;
-    
-    return xml;
-  }
 
-  private static mapToDoctrineType(column: TableColumn): string {
-    const type = column.type.toLowerCase();
-    
-    switch (type) {
-      case 'int':
-      case 'integer':
-        // Check for special integer string conversion pattern
-        if (column.name.endsWith('_by')) {
-          return 'integer_string_conversion';
-        }
-        return 'integer';
-      case 'varchar':
-      case 'char':
-        return 'string';
-      case 'text':
-      case 'longtext':
-      case 'mediumtext':
-        return 'text';
-      case 'tinyint':
-        if (column.length === 1) {
-          return 'boolean';
-        }
-        return 'smallint';
-      case 'datetime':
-      case 'timestamp':
-        return 'datetime';
-      case 'date':
-        return 'date';
-      case 'time':
-        return 'time';
-      case 'decimal':
-      case 'numeric':
-        return 'decimal';
-      case 'float':
-        return 'float';
-      case 'double':
-        return 'float';
-      case 'json':
-        return 'json';
-      default:
-        return 'string';
-    }
-  }
 
-  private static isForeignKeyColumn(columnName: string, schema: TableSchema): boolean {
-    return schema.constraints.some(constraint => 
-      constraint.type === 'FOREIGN KEY' && 
-      constraint.columns.includes(columnName)
-    );
-  }
 
-  private static isSpecialTimestampColumn(columnName: string): boolean {
-    const timestampPatterns = ['created', 'sent', 'received', 'deleted', 'updated'];
-    return timestampPatterns.some(pattern => 
-      columnName === pattern || 
-      columnName.startsWith(pattern + '_') ||
-      columnName.endsWith('_' + pattern)
-    );
-  }
-
-  private static getTimestampFieldName(columnName: string): string {
-    // Convert timestamp columns to camelCase with 'At' suffix
-    if (columnName === 'created') return 'createdAt';
-    if (columnName === 'sent') return 'sentAt';
-    if (columnName === 'received') return 'receivedAt';
-    if (columnName === 'deleted') return 'deletedAt';
-    if (columnName === 'updated') return 'updatedAt';
-    
-    return this.toCamelCase(columnName);
-  }
-
-  private static getRelationshipFieldName(columnName: string): string {
-    // Remove _id suffix and convert to camelCase
-    const baseName = columnName.replace(/_id$/, '');
-    return this.toCamelCase(baseName);
-  }
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
     // Convert table name to PascalCase entity name
-    const baseName = this.toPascalCase(tableName);
+    const baseName = ORMMappingUtils.toPascalCase(tableName);
     return `${options.entityPrefix}${baseName}${options.entitySuffix}`;
-  }
-
-  private static toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-
-  private static toPascalCase(str: string): string {
-    const camelCase = this.toCamelCase(str);
-    return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
   }
 }
