@@ -91,6 +91,7 @@ class ${className} implements
     const traitProperties = this.getTraitProperties(selectedTraits, options);
     const traitMethods = this.getTraitMethods(selectedTraits, options);
     
+    
     // Generate ID field property first (if it exists and not provided by traits)
     const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
     if (idColumn && !traitProperties.has('id')) {
@@ -192,12 +193,12 @@ class ${className} implements
         const getterName = this.getGetterName(idColumn);
         const setterName = 'setId';
         
-        // Skip if getter or setter is already provided by a trait
-        if ((options.generateGetters && traitMethods.has(getterName)) || 
-            (options.generateSetters && traitMethods.has(setterName))) {
-          // Skip
-        } else {
-          php += this.generateGetterSetter(idColumn, schema, options);
+        // Generate getter and setter individually based on trait availability
+        const shouldGenerateGetter = options.generateGetters && !traitMethods.has(getterName);
+        const shouldGenerateSetter = options.generateSetters && !traitMethods.has(setterName);
+        
+        if (shouldGenerateGetter || shouldGenerateSetter) {
+          php += this.generateGetterSetterSelective('id', idColumn, schema, options, shouldGenerateGetter, shouldGenerateSetter);
         }
       }
     }
@@ -205,27 +206,24 @@ class ${className} implements
     // Generate getters and setters based on the ORM mapping, excluding those provided by traits
     if (options.generateGetters || options.generateSetters) {
       for (const field of ormMapping.fields) {
-        // Skip if this property is already provided by a trait
-        if (traitProperties.has(field.name)) {
-          continue;
-        }
+        // Note: We don't skip fields just because they have trait properties
+        // We only skip individual getter/setter methods if the trait provides them
         
         // Find the corresponding column for additional metadata
         const column = schema.columns.find(col => ORMMappingUtils.getFieldName(col.name, options) === field.name);
         if (!column) continue;
         
         // Generate getter/setter for this field, excluding methods already provided by traits
-        const getterName = this.getGetterName(column);
+        const getterName = this.getGetterNameFromField(field.name, column);
         const setterName = `set${ORMMappingUtils.toPascalCase(field.name)}`;
         
-        // Skip if getter or setter is already provided by a trait
-        if ((options.generateGetters && traitMethods.has(getterName)) || 
-            (options.generateSetters && traitMethods.has(setterName))) {
-          continue;
-        }
+        // Generate getter and setter individually based on trait availability
+        const shouldGenerateGetter = options.generateGetters && !traitMethods.has(getterName);
+        const shouldGenerateSetter = options.generateSetters && !traitMethods.has(setterName);
         
-        // Regular field
-        php += this.generateGetterSetter(column, schema, options);
+        if (shouldGenerateGetter || shouldGenerateSetter) {
+          php += this.generateGetterSetterSelective(field.name, column, schema, options, shouldGenerateGetter, shouldGenerateSetter);
+        }
       }
         }
     
@@ -240,14 +238,14 @@ class ${className} implements
       const getterName = `get${ORMMappingUtils.toPascalCase(relationship.field)}`;
       const setterName = `set${ORMMappingUtils.toPascalCase(relationship.field)}`;
       
-      // Skip if getter or setter is already provided by a trait
-      if ((options.generateGetters && traitMethods.has(getterName)) || 
-          (options.generateSetters && traitMethods.has(setterName))) {
-        continue;
-      }
+      // Generate getter and setter individually based on trait availability
+      const shouldGenerateGetter = options.generateGetters && !traitMethods.has(getterName);
+      const shouldGenerateSetter = options.generateSetters && !traitMethods.has(setterName);
       
-      // Generate getters and setters for all relationships when enabled
-      php += this.generateRelationshipGetterSetter(relationship, options, schema);
+      if (shouldGenerateGetter || shouldGenerateSetter) {
+        // For now, use the existing method - we can make this selective later if needed
+        php += this.generateRelationshipGetterSetter(relationship, options, schema);
+      }
     }
 
 
@@ -355,9 +353,13 @@ class ${className} implements
       .filter(trait => selectedTraits.includes(trait.name));
     
     for (const trait of selectedTraitsInOrder) {
-      if (trait.methods.length > 0) {
-        for (const method of trait.methods) {
-          traitMethods.add(method.name);
+      for (const property of trait.properties) {
+        // Only add methods if the toggles are explicitly enabled
+        if (property.hasGetter === true) {
+          traitMethods.add(`get${ORMMappingUtils.toPascalCase(property.name)}`);
+        }
+        if (property.hasSetter === true) {
+          traitMethods.add(`set${ORMMappingUtils.toPascalCase(property.name)}`);
         }
       }
     }
@@ -402,11 +404,43 @@ class ${className} implements
     return methods;
   }
 
+  private static generateGetterSetterSelective(
+    fieldName: string,
+    column: TableColumn, 
+    schema: TableSchema, 
+    options: GenerationOptions,
+    generateGetter: boolean,
+    generateSetter: boolean
+  ): string {
+    const getterName = this.getGetterNameFromField(fieldName, column);
+    const phpType = ORMMappingUtils.mapToPHPType(column, options);
+    const pascalFieldName = ORMMappingUtils.toPascalCase(fieldName);
 
+    let methods = '';
 
+    if (generateGetter) {
+      methods += `
 
+    public function ${getterName}(): ${phpType}
+    {
+        return $this->${fieldName};
+    }`;
+    }
 
+    if (generateSetter) {
+      const returnType = options.generateFluentSetters ? 'self' : 'void';
+      const returnStatement = options.generateFluentSetters ? '\n\n        return $this;' : '';
+      
+      methods += `
 
+    public function set${pascalFieldName}(${phpType} $${fieldName}): ${returnType}
+    {
+        $this->${fieldName} = $${fieldName};${returnStatement}
+    }`;
+    }
+
+    return methods;
+  }
 
   private static generateRelationshipGetterSetter(relationship: Relationship, options: GenerationOptions, schema: TableSchema): string {
     const fieldName = relationship.field;
@@ -491,6 +525,15 @@ class ${className} implements
   private static getGetterName(column: TableColumn): string {
     const fieldName = ORMMappingUtils.toCamelCase(column.name);
     
+    // Use 'is' prefix for boolean fields
+    if (column.type.toLowerCase() === 'tinyint' && column.length === 1) {
+      return `is${ORMMappingUtils.toPascalCase(fieldName)}`;
+    }
+    
+    return `get${ORMMappingUtils.toPascalCase(fieldName)}`;
+  }
+
+  private static getGetterNameFromField(fieldName: string, column: TableColumn): string {
     // Use 'is' prefix for boolean fields
     if (column.type.toLowerCase() === 'tinyint' && column.length === 1) {
       return `is${ORMMappingUtils.toPascalCase(fieldName)}`;

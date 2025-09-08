@@ -13,6 +13,11 @@ interface CollapsibleSectionProps {
   showOrderNumber?: boolean;
   orderNumber?: number;
   headerToggle?: ReactNode; // Optional toggle control in header
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  isDragged?: boolean;
 }
 
 export function CollapsibleSection({
@@ -24,17 +29,31 @@ export function CollapsibleSection({
   showDragHandle = false,
   showOrderNumber = false,
   orderNumber,
-  headerToggle
+  headerToggle,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  isDragged = false
 }: CollapsibleSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   return (
-    <div className="border border-gray-200 rounded-lg">
+    <div 
+      className={`border border-gray-200 rounded-lg ${isDragged ? 'opacity-50' : ''}`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       {/* Header - Always Visible */}
       <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center space-x-3">
           {/* Drag Handle */}
           {showDragHandle && (
-            <div className="cursor-move text-gray-400 hover:text-gray-600">
+            <div 
+              className="cursor-move text-gray-400 hover:text-gray-600"
+              draggable
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            >
               <GripVertical className="w-5 h-5" />
             </div>
           )}

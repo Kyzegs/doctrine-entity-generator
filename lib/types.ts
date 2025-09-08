@@ -67,7 +67,6 @@ export interface CustomTrait {
   description: string;
   namespace: string;
   properties: TraitProperty[];
-  methods: TraitMethod[];
   requiredInterfaces: string[];
 }
 
@@ -78,22 +77,10 @@ export interface TraitProperty {
   nullable: boolean;
   defaultValue?: string;
   description: string;
+  hasGetter: boolean;
+  hasSetter: boolean;
 }
 
-export interface TraitMethod {
-  name: string;
-  returnType: string;
-  parameters: TraitParameter[];
-  visibility: 'public' | 'protected' | 'private';
-  description: string;
-}
-
-export interface TraitParameter {
-  name: string;
-  type: string;
-  nullable: boolean;
-  defaultValue?: string;
-}
 
 export interface GenerationOptions {
   namespace: string;

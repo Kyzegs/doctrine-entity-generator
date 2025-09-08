@@ -152,7 +152,7 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">Column-Field Mappings</label>
             <div className="space-y-2">
               {options.columnFieldMappings.map((mapping, index) => (
-                <div key={index} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
+                <div key={`mapping-${index}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
                   <input
                     type="text"
                     value={mapping.field}
@@ -247,7 +247,7 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">Custom Data Types</label>
             <div className="space-y-2">
               {options.customDataTypes.map((dataType, index) => (
-                <div key={index} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <div key={`datatype-${index}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-2 items-center">
                   <input
                     type="text"
                     value={dataType.name}

@@ -33,7 +33,14 @@ export class ORMMappingUtils {
         continue;
       }
       
-      const fieldName = this.getFieldName(column.name, options);
+      // Determine field name - use custom mapping if available, otherwise convert from column name
+      let fieldName = this.getFieldName(column.name, options);
+      
+      // Check if there's a custom mapping that defines a different field name
+      const fieldMapping = options.columnFieldMappings.find(mapping => mapping.column === column.name);
+      if (fieldMapping && fieldMapping.field) {
+        fieldName = fieldMapping.field;
+      }
       const isRelationship = column.name.endsWith('_id') && this.isConfiguredAsRelationship(column.name, options);
       
       if (isRelationship) {
@@ -48,8 +55,12 @@ export class ORMMappingUtils {
       const isTimestamp = false; // No more hardcoded timestamp detection
       const isByField = false; // No more hardcoded _by detection
       
-      // Get custom mapping for this field
-      const customMapping = options.columnFieldMappings.find(mapping => mapping.field === fieldName);
+      // Get custom mapping for this field - first try by field name, then by column name
+      let customMapping = options.columnFieldMappings.find(mapping => mapping.field === fieldName);
+      if (!customMapping && column.name) {
+        // Also check if there's a mapping where the column matches
+        customMapping = options.columnFieldMappings.find(mapping => mapping.column === column.name);
+      }
       
       // Determine Doctrine type
       let doctrineType = this.mapToDoctrineType(column);

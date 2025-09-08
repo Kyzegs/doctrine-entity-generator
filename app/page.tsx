@@ -144,6 +144,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
   // Relationship settings
   relationships: [
     {
+      id: 'relationship-user',
       field: 'user',
       type: 'many-to-one',
       targetEntity: 'User',
@@ -152,6 +153,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
       fetch: 'LAZY'
     },
     {
+      id: 'relationship-orders',
       field: 'orders',
       type: 'one-to-many',
       targetEntity: 'Order',
@@ -236,6 +238,7 @@ export default function Home() {
 
   const addSuggestedRelationship = (suggestion: any) => {
     const newRelationship = {
+      id: `relationship-${Date.now()}-${suggestion.field}`,
       field: suggestion.field,
       type: suggestion.type,
       targetEntity: suggestion.targetEntity,
@@ -361,7 +364,7 @@ export default function Home() {
                 </p>
                 <div className="space-y-2">
                   {relationshipSuggestions.map((suggestion, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
+                    <div key={`suggestion-${suggestion.field}-${suggestion.column}-${index}`} className="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900">
                           {suggestion.field} → {suggestion.targetEntity}
