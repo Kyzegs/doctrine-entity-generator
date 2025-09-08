@@ -4,7 +4,7 @@ import { ORMMappingUtils } from './orm-mapping-utils';
 export class DoctrineXMLGenerator {
   static generate(schema: TableSchema, options: GenerationOptions): string {
     const entityName = this.getEntityName(schema.name, options);
-    const entityClass = `${options.namespace}\\${entityName}`;
+    const entityClass = options.namespace ? `${options.namespace}\\${entityName}` : entityName;
     
     // Create ORM mapping for field generation
     const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -155,6 +155,11 @@ export class DoctrineXMLGenerator {
 
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
+    // Use custom entity name if provided, otherwise convert table name to PascalCase
+    if (options.entityName && options.entityName.trim()) {
+      return `${options.entityPrefix}${options.entityName.trim()}${options.entitySuffix}`;
+    }
+    
     // Convert table name to PascalCase entity name
     const baseName = ORMMappingUtils.toPascalCase(tableName);
     return `${options.entityPrefix}${baseName}${options.entitySuffix}`;

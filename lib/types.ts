@@ -86,6 +86,7 @@ export interface GenerationOptions {
   namespace: string;
   entityPrefix: string;
   entitySuffix: string;
+  entityName: string; // Manual override for entity name (not shareable)
   databaseDialect: 'mysql' | 'postgresql' | 'sqlite' | 'mariadb';
   
   // ORM mapping settings
@@ -105,4 +106,16 @@ export interface GenerationOptions {
   // Trait settings
   customTraits: CustomTrait[];
   selectedTraits: string[];
+}
+
+export interface ShareableConfiguration {
+  version: string;
+  exportedAt: string;
+  namespace: string;
+  entityPrefix: string;
+  entitySuffix: string;
+  customDataTypes: CustomDataType[];
+  columnFieldMappings: ColumnFieldMapping[];
+  explicitlyDefineColumns: boolean;
+  customTraits: CustomTrait[];
 }

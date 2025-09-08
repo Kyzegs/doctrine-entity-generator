@@ -12,11 +12,9 @@ export class PHPEntityGenerator {
     let php = `<?php
 
 declare(strict_types=1);
+${options.namespace ? `
+namespace ${options.namespace};` : ''}
 
-namespace ${options.namespace};
-
-use App\\Shared\\Domain\\Enum\\ScrambleCodeEnum;
-use App\\Shared\\Domain\\Model\\Identity\\ScrambleCodeEntityInterface;
 use DateTimeImmutable;
 use Doctrine\\Common\\Collections\\Collection;
 use Doctrine\\Common\\Collections\\ArrayCollection;`;
@@ -39,8 +37,14 @@ use Doctrine\\Common\\Collections\\ArrayCollection;`;
       const targetEntity = relationship.targetEntityNamespace 
         ? relationship.targetEntityNamespace
         : options.namespace;
-      php += `
+      
+      if (targetEntity) {
+        php += `
 use ${targetEntity}\\${relationship.targetEntity};`;
+      } else {
+        php += `
+use ${relationship.targetEntity};`;
+      }
     }
     
     // Add trait imports
@@ -48,30 +52,20 @@ use ${targetEntity}\\${relationship.targetEntity};`;
       php += `
 ${importStatement}`;
     }
+
+    // Build class declaration with optional implements clause
+    let classDeclaration = `class ${className}`;
     
-
-
-    // Add relationship imports
-    for (const relationship of options.relationships) {
-      const targetEntity = relationship.targetEntityNamespace 
-        ? relationship.targetEntityNamespace
-        : options.namespace;
-      php += `
-use ${targetEntity}\\${relationship.targetEntity};`;
+    // Add implements clause only if there are interfaces from traits
+    if (traitInterfaces.size > 0) {
+      const interfaceList = Array.from(traitInterfaces).join(',\n    ');
+      classDeclaration += ` implements
+    ${interfaceList}`;
     }
 
     php += `
 
-class ${className} implements
-    ScrambleCodeEntityInterface`;
-
-    // Add required interfaces from selected traits
-    for (const interfaceName of traitInterfaces) {
-      php += `,
-    ${interfaceName}`;
-    }
-
-    php += `
+${classDeclaration}
 {`;
 
     // Add selected traits in the same order as they appear in the UI
@@ -92,9 +86,9 @@ class ${className} implements
     const traitMethods = this.getTraitMethods(selectedTraits, options);
     
     
-    // Generate ID field property first (if it exists and not provided by traits)
+    // Generate ID field property only if it's nullable (required properties go in constructor)
     const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
-    if (idColumn && !traitProperties.has('id')) {
+    if (idColumn && !traitProperties.has('id') && idColumn.nullable) {
       const visibility = options.publicProperties ? 'public' : 'private';
       const nullable = idColumn.nullable ? '?' : '';
       const defaultValue = idColumn.nullable ? ' = null' : '';
@@ -176,15 +170,6 @@ class ${className} implements
 
     // Generate constructor
     php += this.generateConstructor(schema, options, traitProperties);
-
-    // Generate getScrambleCode method
-    const scrambleCodeName = schema.name.toUpperCase();
-    php += `
-
-    public function getScrambleCode(): ScrambleCodeEnum
-    {
-        return ScrambleCodeEnum::${scrambleCodeName};
-    }`;
 
     // Generate ID field getters and setters first (if enabled and not provided by traits)
     if (options.generateGetters || options.generateSetters) {
@@ -547,9 +532,13 @@ class ${className} implements
 
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
+    // Use custom entity name if provided, otherwise convert table name to PascalCase
+    if (options.entityName && options.entityName.trim()) {
+      return options.entityName.trim();
+    }
+    
     // Convert table name to PascalCase entity name
-    const baseName = ORMMappingUtils.toPascalCase(tableName);
-    return `${options.entityPrefix}${baseName}${options.entitySuffix}`;
+    return ORMMappingUtils.toPascalCase(tableName);
   }
 
 

@@ -4,9 +4,16 @@ import { useState, useEffect } from 'react';
 import { SQLParser } from '@/lib/sql-parser';
 import { DoctrineXMLGenerator } from '@/lib/doctrine-xml-generator';
 import { PHPEntityGenerator } from '@/lib/php-entity-generator';
-import { GenerationOptions } from '@/lib/types';
+import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
 import { CodeOutput } from '@/components/code-output';
 import { OptionsForm } from '@/components/options-form';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, Download, Upload, Clipboard, FileText } from 'lucide-react';
 
 const EXAMPLE_SQL = {
   mysql: `CREATE TABLE \`boarding\` (
@@ -115,9 +122,10 @@ const EXAMPLE_SQL = {
 const DEFAULT_SQL = EXAMPLE_SQL.mysql;
 
 const DEFAULT_OPTIONS: GenerationOptions = {
-  namespace: 'AntiCorruptionLayer\\Tinpay\\Entity',
+  namespace: '',
   entityPrefix: '',
   entitySuffix: '',
+  entityName: '', // Manual override for entity name (not shareable)
   databaseDialect: 'mysql',
   
   // ORM mapping settings
@@ -142,27 +150,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
   generateFluentSetters: true,
   
   // Relationship settings
-  relationships: [
-    {
-      id: 'relationship-user',
-      field: 'user',
-      type: 'many-to-one',
-      targetEntity: 'User',
-      joinColumn: 'user_id',
-      cascade: ['persist', 'merge'],
-      fetch: 'LAZY'
-    },
-    {
-      id: 'relationship-orders',
-      field: 'orders',
-      type: 'one-to-many',
-      targetEntity: 'Order',
-      mappedBy: 'customer',
-      cascade: ['persist', 'remove'],
-      orphanRemoval: true,
-      fetch: 'LAZY'
-    }
-  ],
+  relationships: [],
   
   // Trait settings
   customTraits: [],
@@ -180,15 +168,24 @@ export default function Home() {
 
   // Load from localStorage after hydration
   useEffect(() => {
-    const saved = localStorage.getItem('entityGeneratorOptions');
+    const saved = localStorage.getItem('entityGeneratorConfig');
     if (saved) {
       try {
-        const parsedOptions = JSON.parse(saved);
-        // Merge with DEFAULT_OPTIONS to ensure all properties exist
-        const mergedOptions = { ...DEFAULT_OPTIONS, ...parsedOptions };
+        const parsedConfig = JSON.parse(saved);
+        // Merge shareable config with DEFAULT_OPTIONS (relationships come from defaults)
+        const mergedOptions = { 
+          ...DEFAULT_OPTIONS, 
+          namespace: parsedConfig.namespace ?? DEFAULT_OPTIONS.namespace,
+          entityPrefix: parsedConfig.entityPrefix ?? DEFAULT_OPTIONS.entityPrefix,
+          entitySuffix: parsedConfig.entitySuffix ?? DEFAULT_OPTIONS.entitySuffix,
+          customDataTypes: parsedConfig.customDataTypes || DEFAULT_OPTIONS.customDataTypes,
+          columnFieldMappings: parsedConfig.columnFieldMappings || DEFAULT_OPTIONS.columnFieldMappings,
+          explicitlyDefineColumns: parsedConfig.explicitlyDefineColumns ?? DEFAULT_OPTIONS.explicitlyDefineColumns,
+          customTraits: parsedConfig.customTraits || DEFAULT_OPTIONS.customTraits
+        };
         setOptions(mergedOptions);
       } catch (e) {
-        console.warn('Failed to parse saved options, using defaults');
+        console.warn('Failed to parse saved config, using defaults');
         setOptions(DEFAULT_OPTIONS);
       }
     } else {
@@ -203,7 +200,112 @@ export default function Home() {
 
   const saveOptionsToLocalStorage = (newOptions: GenerationOptions) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('entityGeneratorOptions', JSON.stringify(newOptions));
+      // Only save shareable configuration (exclude relationships as they're query-specific)
+      const shareableConfig = {
+        namespace: newOptions.namespace,
+        entityPrefix: newOptions.entityPrefix,
+        entitySuffix: newOptions.entitySuffix,
+        customDataTypes: newOptions.customDataTypes,
+        columnFieldMappings: newOptions.columnFieldMappings,
+        explicitlyDefineColumns: newOptions.explicitlyDefineColumns,
+        customTraits: newOptions.customTraits
+      };
+      localStorage.setItem('entityGeneratorConfig', JSON.stringify(shareableConfig));
+    }
+  };
+
+  const createShareableConfig = (): ShareableConfiguration => ({
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    namespace: options.namespace,
+    entityPrefix: options.entityPrefix,
+    entitySuffix: options.entitySuffix,
+    customDataTypes: options.customDataTypes,
+    columnFieldMappings: options.columnFieldMappings,
+    explicitlyDefineColumns: options.explicitlyDefineColumns,
+    customTraits: options.customTraits
+  });
+
+  const exportToFile = () => {
+    const shareableConfig = createShareableConfig();
+    const dataStr = JSON.stringify(shareableConfig, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `entity-generator-config-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToClipboard = async () => {
+    try {
+      const shareableConfig = createShareableConfig();
+      const dataStr = JSON.stringify(shareableConfig, null, 2);
+      await navigator.clipboard.writeText(dataStr);
+      alert('Configuration copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      alert('Failed to copy to clipboard. Please try exporting to file instead.');
+    }
+  };
+
+  const applyImportedConfig = (configStr: string) => {
+    try {
+      const importedConfig: ShareableConfiguration = JSON.parse(configStr);
+      
+      // Validate the imported configuration
+      if (!importedConfig.version || !importedConfig.customDataTypes || !importedConfig.customTraits) {
+        throw new Error('Invalid configuration file');
+      }
+
+      // Merge imported config with current options (keeping current relationships)
+      const newOptions: GenerationOptions = {
+        ...options,
+        namespace: importedConfig.namespace,
+        entityPrefix: importedConfig.entityPrefix,
+        entitySuffix: importedConfig.entitySuffix,
+        customDataTypes: importedConfig.customDataTypes,
+        columnFieldMappings: importedConfig.columnFieldMappings,
+        explicitlyDefineColumns: importedConfig.explicitlyDefineColumns,
+        customTraits: importedConfig.customTraits
+      };
+
+      setOptions(newOptions);
+      saveOptionsToLocalStorage(newOptions);
+      
+      alert('Configuration imported successfully!');
+    } catch (error) {
+      console.error('Failed to import configuration:', error);
+      alert('Failed to import configuration. Please check the format.');
+    }
+  };
+
+  const importFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const configStr = e.target?.result as string;
+      applyImportedConfig(configStr);
+    };
+    
+    reader.readAsText(file);
+    // Reset the input so the same file can be imported again
+    event.target.value = '';
+  };
+
+  const importFromClipboard = async () => {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      applyImportedConfig(clipboardText);
+    } catch (error) {
+      console.error('Failed to read from clipboard:', error);
+      alert('Failed to read from clipboard. Please try importing from file instead.');
     }
   };
 
@@ -296,6 +398,60 @@ export default function Home() {
           <p className="text-xl text-gray-600">
             Generate Doctrine PHP entities and ORM XML mappings from SQL CREATE TABLE statements
           </p>
+          
+          {/* Configuration Import/Export */}
+          <div className="flex justify-center space-x-4 mt-6">
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+                  <Download className="w-4 h-4" />
+                  <span>Export Configuration</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={exportToFile}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export to File
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToClipboard}>
+                  <Clipboard className="w-4 h-4 mr-2" />
+                  Export to Clipboard
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Import Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">
+                  <Upload className="w-4 h-4" />
+                  <span>Import Configuration</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => document.getElementById('file-import')?.click()}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Import from File
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={importFromClipboard}>
+                  <Clipboard className="w-4 h-4 mr-2" />
+                  Import from Clipboard
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Hidden file input */}
+            <input
+              id="file-import"
+              type="file"
+              accept=".json"
+              onChange={importFromFile}
+              className="hidden"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -70,6 +70,19 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
         <h4 className="font-medium text-gray-900 mb-3">Basic Settings</h4>
         <div className="space-y-3">
           <div>
+            <label htmlFor="entityName" className="block text-sm font-medium text-gray-700 mb-1">
+              Entity Name Override
+            </label>
+            <input
+              type="text"
+              id="entityName"
+              value={options.entityName}
+              onChange={(e) => handleInputChange('entityName', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+              placeholder="Leave empty to auto-generate from table name"
+            />
+          </div>
+          <div>
             <label htmlFor="namespace" className="block text-sm font-medium text-gray-700 mb-1">
               PHP Namespace
             </label>
@@ -79,7 +92,7 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
               value={options.namespace}
               onChange={(e) => handleInputChange('namespace', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-              placeholder="AntiCorruptionLayer\Tinpay\Entity"
+              placeholder="e.g. App\Entity"
             />
           </div>
           
