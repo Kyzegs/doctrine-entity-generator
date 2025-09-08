@@ -5,7 +5,7 @@ import { SQLParser } from '@/lib/sql-parser';
 import { DoctrineXMLGenerator } from '@/lib/doctrine-xml-generator';
 import { PHPEntityGenerator } from '@/lib/php-entity-generator';
 import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
-import { CodeOutput } from '@/components/code-output';
+import { TabbedCodeOutput } from '@/components/tabbed-code-output';
 import { OptionsForm } from '@/components/options-form';
 import {
   DropdownMenu,
@@ -544,18 +544,22 @@ export default function Home() {
           </div>
 
           <div className="space-y-6">
-            {xmlOutput && (
-              <CodeOutput
-                title="Doctrine XML Mapping"
-                code={xmlOutput}
-                language="xml"
-              />
-            )}
-            {phpOutput && (
-              <CodeOutput
-                title="PHP Entity Class"
-                code={phpOutput}
-                language="php"
+            {(xmlOutput || phpOutput) && (
+              <TabbedCodeOutput
+                tabs={[
+                  ...(xmlOutput ? [{
+                    id: 'xml',
+                    title: 'Doctrine XML Mapping',
+                    code: xmlOutput,
+                    language: 'xml'
+                  }] : []),
+                  ...(phpOutput ? [{
+                    id: 'php',
+                    title: 'PHP Entity Class',
+                    code: phpOutput,
+                    language: 'php'
+                  }] : [])
+                ]}
               />
             )}
           </div>
