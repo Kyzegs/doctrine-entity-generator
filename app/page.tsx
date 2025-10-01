@@ -7,6 +7,10 @@ import { PHPEntityGenerator } from '@/lib/php-entity-generator';
 import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
 import { TabbedCodeOutput } from '@/components/tabbed-code-output';
 import { OptionsForm } from '@/components/options-form';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -398,26 +402,26 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
             Doctrine Entity Generator
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-muted-foreground">
             Generate Doctrine PHP entities and ORM XML mappings from SQL CREATE TABLE statements
           </p>
           
           {/* Configuration Import/Export */}
-          <div className="flex justify-center space-x-4 mt-6">
+          <div className="flex justify-center items-center space-x-4 mt-6">
             {/* Export Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+                <Button variant="default" className="flex items-center space-x-2">
                   <Download className="w-4 h-4" />
                   <span>Export Configuration</span>
                   <ChevronDown className="w-4 h-4" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={exportToFile}>
@@ -434,11 +438,11 @@ export default function Home() {
             {/* Import Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">
+                <Button variant="secondary" className="flex items-center space-x-2">
                   <Upload className="w-4 h-4" />
                   <span>Import Configuration</span>
                   <ChevronDown className="w-4 h-4" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => document.getElementById('file-import')?.click()}>
@@ -451,6 +455,9 @@ export default function Home() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Hidden file input */}
             <input
@@ -466,26 +473,26 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
-              <label htmlFor="sql-input" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="sql-input" className="block text-sm font-medium mb-2">
                 SQL CREATE TABLE Statement
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 id="sql-input"
                 value={sqlInput}
                 onChange={(e) => setSqlInput(e.target.value)}
-                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm text-black"
+                className="w-full h-64 font-mono text-sm"
                 placeholder="Paste your CREATE TABLE statement here..."
               />
             </div>
 
             {!isHydrated ? (
-              <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div className="space-y-4 p-4 border border-border rounded-lg bg-muted">
                 <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                  <div className="h-4 bg-muted-foreground/20 rounded w-1/4 mb-4"></div>
                   <div className="space-y-3">
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-muted-foreground/20 rounded"></div>
+                    <div className="h-10 bg-muted-foreground/20 rounded"></div>
+                    <div className="h-10 bg-muted-foreground/20 rounded"></div>
                   </div>
                 </div>
               </div>
@@ -504,47 +511,49 @@ export default function Home() {
             )}
 
             <div className="flex gap-4">
-              <button
+              <Button
                 onClick={generateCode}
-                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                className="flex-1"
+                size="lg"
               >
                 Generate Code
-              </button>
+              </Button>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <p className="text-red-800">{error}</p>
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
+                <p className="text-destructive">{error}</p>
               </div>
             )}
 
             {/* Relationship Suggestions */}
             {relationshipSuggestions.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                <h3 className="text-lg font-medium text-blue-900 mb-3">
+              <div className="bg-accent border border-accent-foreground/20 rounded-md p-4">
+                <h3 className="text-lg font-medium text-accent-foreground mb-3">
                   Suggested Relationships
                 </h3>
-                <p className="text-sm text-blue-700 mb-3">
+                <p className="text-sm text-muted-foreground mb-3">
                   The following fields ending with "_id" were detected and can be configured as relationships:
                 </p>
                 <div className="space-y-2">
                   {relationshipSuggestions.map((suggestion, index) => (
-                    <div key={`suggestion-${suggestion.field}-${suggestion.column}-${index}`} className="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
+                    <div key={`suggestion-${suggestion.field}-${suggestion.column}-${index}`} className="flex items-center justify-between p-3 bg-card rounded border border-border">
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-card-foreground">
                           {suggestion.field} → {suggestion.targetEntity}
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-muted-foreground">
                           Column: {suggestion.column} | Type: {suggestion.type}
                           {suggestion.isNullable && ' | Nullable'}
                         </div>
                       </div>
-                      <button
+                      <Button
                         onClick={() => addSuggestedRelationship(suggestion)}
-                        className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                        size="sm"
+                        className="ml-3"
                       >
                         Add Relationship
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>

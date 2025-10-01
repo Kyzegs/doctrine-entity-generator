@@ -3,6 +3,11 @@
 import { CustomTrait, GenerationOptions } from '@/lib/types';
 import { CollapsibleSection } from './ui/collapsible-section';
 import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TraitManagementProps {
   options: GenerationOptions;
@@ -97,20 +102,20 @@ export function TraitManagement({
   };
 
   return (
-    <div className="border-t border-gray-200 pt-4">
-      <h4 className="font-medium text-gray-900 mb-3">Custom Traits Management</h4>
-      <p className="text-sm text-gray-600 mb-3">
+    <div className="border-t border-border pt-4">
+      <h4 className="font-medium text-foreground mb-3">Custom Traits Management</h4>
+      <p className="text-sm text-muted-foreground mb-3">
         Create and manage custom traits for your entities. Each trait can have properties with getter/setter toggles and required interfaces.
       </p>
       
       {/* Add New Trait Button */}
-      <button
+      <Button
         type="button"
         onClick={handleAddTrait}
-        className="mb-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+        className="mb-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 text-sm"
       >
         Add New Trait
-      </button>
+      </Button>
       
       {/* Traits List */}
       <div className="space-y-4">
@@ -120,7 +125,7 @@ export function TraitManagement({
             <div
               className={`min-h-2 transition-all duration-200 ${
                 draggedTraitId && draggedTraitId !== trait.id 
-                  ? 'bg-blue-100 border-2 border-dashed border-blue-300 rounded mb-2' 
+                  ? 'bg-accent border-2 border-dashed border-accent-foreground/20 rounded mb-2' 
                   : ''
               }`}
               onDragOver={onDragOver}
@@ -156,15 +161,14 @@ export function TraitManagement({
               isDragged={draggedTraitId === trait.id}
               headerToggle={
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     id={`use-trait-${trait.id}`}
                     checked={options.selectedTraits?.includes(trait.name) || false}
-                    onChange={(e) => {
+                    onCheckedChange={(checked) => {
                       const currentTraits = options.selectedTraits || [];
                       let newTraits: string[];
                       
-                      if (e.target.checked) {
+                      if (checked) {
                         newTraits = [...currentTraits, trait.name];
                       } else {
                         newTraits = currentTraits.filter(t => t !== trait.name);
@@ -172,44 +176,43 @@ export function TraitManagement({
                       
                       onOptionsChange({ ...options, selectedTraits: newTraits });
                     }}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     disabled={!trait.name}
                   />
-                  <label htmlFor={`use-trait-${trait.id}`} className="text-sm text-gray-700">
+                  <Label htmlFor={`use-trait-${trait.id}`} className="text-sm">
                     Use trait
-                  </label>
+                  </Label>
                 </div>
               }
             >
               {/* Trait Basic Info */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
-                <input
+                <Input
                   type="text"
                   value={trait.name}
                   onChange={(e) => handleTraitChange(traitIndex, 'name', e.target.value)}
                   placeholder="Trait name (e.g., TimestampableTrait)"
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black min-w-0"
+                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
                 />
-                <input
+                <Input
                   type="text"
                   value={trait.displayName}
                   onChange={(e) => handleTraitChange(traitIndex, 'displayName', e.target.value)}
                   placeholder="Display name (e.g., Timestampable)"
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black min-w-0"
+                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
                 />
-                <input
+                <Input
                   type="text"
                   value={trait.namespace}
                   onChange={(e) => handleTraitChange(traitIndex, 'namespace', e.target.value)}
                   placeholder="Namespace (e.g., App\\Traits)"
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black min-w-0"
+                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
                 />
-                <input
+                <Input
                   type="text"
                   value={trait.description}
                   onChange={(e) => handleTraitChange(traitIndex, 'description', e.target.value)}
                   placeholder="Description"
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black min-w-0"
+                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
                 />
               </div>
               
@@ -217,76 +220,74 @@ export function TraitManagement({
               
               {/* Properties Management */}
               <div className="mb-4">
-                <h6 className="font-medium text-gray-700 mb-2">Properties</h6>
-                <button
+                <h6 className="font-medium text-foreground mb-2">Properties</h6>
+                <Button
                   type="button"
                   onClick={() => handleAddProperty(traitIndex)}
-                  className="mb-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                  className="mb-2 px-2 py-1 bg-primary text-secondary-foreground rounded text-xs hover:bg-primary/90"
                 >
                   Add Property
-                </button>
+                </Button>
                 
                 <div className="space-y-2">
                   {trait.properties.map((property, propIndex) => (
-                    <div key={`property-${trait.id}-${propIndex}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-2 p-2 border border-gray-200 rounded items-center">
-                      <input
+                    <div key={`property-${trait.id}-${propIndex}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-2 p-2 border border-border rounded items-center">
+                      <Input
                         type="text"
                         value={property.name}
                         onChange={(e) => handlePropertyChange(traitIndex, propIndex, 'name', e.target.value)}
                         placeholder="Property name"
-                        className="px-2 py-1 border border-gray-300 rounded text-xs text-black min-w-0"
+                        className="text-xs min-w-0"
                       />
-                      <input
+                      <Input
                         type="text"
                         value={property.type}
                         onChange={(e) => handlePropertyChange(traitIndex, propIndex, 'type', e.target.value)}
                         placeholder="Type"
-                        className="px-2 py-1 border border-gray-300 rounded text-xs text-black min-w-0"
+                        className="text-xs min-w-0"
                       />
-                      <select
+                      <Select
                         value={property.visibility}
-                        onChange={(e) => handlePropertyChange(traitIndex, propIndex, 'visibility', e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs text-black min-w-0"
+                        onValueChange={(value) => handlePropertyChange(traitIndex, propIndex, 'visibility', value)}
                       >
-                        <option value="private">private</option>
-                        <option value="protected">protected</option>
-                        <option value="public">public</option>
-                      </select>
+                        <SelectTrigger className="text-xs w-full min-w-[120px]">
+                          <SelectValue placeholder="Select visibility" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">private</SelectItem>
+                          <SelectItem value="protected">protected</SelectItem>
+                          <SelectItem value="public">public</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={property.nullable}
-                          onChange={(e) => handlePropertyChange(traitIndex, propIndex, 'nullable', e.target.checked)}
-                          className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          onCheckedChange={(checked) => handlePropertyChange(traitIndex, propIndex, 'nullable', checked)}
                         />
-                        <span className="ml-1 text-xs text-gray-600">nullable</span>
+                        <span className="ml-1 text-xs text-muted-foreground">nullable</span>
                       </div>
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={property.hasGetter ?? true}
-                          onChange={(e) => handlePropertyChange(traitIndex, propIndex, 'hasGetter', e.target.checked)}
-                          className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          onCheckedChange={(checked) => handlePropertyChange(traitIndex, propIndex, 'hasGetter', checked)}
                         />
-                        <span className="ml-1 text-xs text-gray-600">getter</span>
+                        <span className="ml-1 text-xs text-muted-foreground">getter</span>
                       </div>
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={property.hasSetter ?? true}
-                          onChange={(e) => handlePropertyChange(traitIndex, propIndex, 'hasSetter', e.target.checked)}
-                          className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          onCheckedChange={(checked) => handlePropertyChange(traitIndex, propIndex, 'hasSetter', checked)}
                         />
-                        <span className="ml-1 text-xs text-gray-600">setter</span>
+                        <span className="ml-1 text-xs text-muted-foreground">setter</span>
                       </div>
-                      <button
+                      <Button
                         type="button"
                         onClick={() => handleRemoveProperty(traitIndex, propIndex)}
-                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                        className="p-1 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded transition-colors flex-shrink-0"
                         title="Remove property"
                       >
                         <Trash2 className="w-3 h-3" />
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -294,33 +295,33 @@ export function TraitManagement({
               
               {/* Required Interfaces Management */}
               <div className="mb-4">
-                <h6 className="font-medium text-gray-700 mb-2">Required Interfaces</h6>
-                <button
+                <h6 className="font-medium text-foreground mb-2">Required Interfaces</h6>
+                <Button
                   type="button"
                   onClick={() => handleAddInterface(traitIndex)}
-                  className="mb-2 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                  className="mb-2 px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs hover:bg-secondary/90"
                 >
                   Add Interface
-                </button>
+                </Button>
                 
                 <div className="space-y-2">
                   {trait.requiredInterfaces.map((interfaceName, interfaceIndex) => (
-                    <div key={`interface-${trait.id}-${interfaceIndex}`} className="flex items-center space-x-2 p-2 border border-gray-200 rounded">
-                      <input
+                    <div key={`interface-${trait.id}-${interfaceIndex}`} className="flex items-center space-x-2 p-2 border border-border rounded">
+                      <Input
                         type="text"
                         value={interfaceName}
                         onChange={(e) => handleInterfaceChange(traitIndex, interfaceIndex, e.target.value)}
                         placeholder="Interface name (e.g., TimestampableInterface)"
-                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs text-black min-w-0"
+                        className="flex-1 px-2 py-1 border border-input rounded text-xs text-foreground min-w-0"
                       />
-                      <button
+                      <Button
                         type="button"
                         onClick={() => handleRemoveInterface(traitIndex, interfaceIndex)}
-                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                        className="p-1 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded transition-colors flex-shrink-0"
                         title="Remove interface"
                       >
                         <Trash2 className="w-3 h-3" />
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -332,7 +333,7 @@ export function TraitManagement({
         {/* Final drop zone at the end */}
         <div
           className={`min-h-2 transition-all duration-200 ${
-            draggedTraitId ? 'bg-blue-100 border-2 border-dashed border-blue-300 rounded' : ''
+            draggedTraitId ? 'bg-accent border-2 border-dashed border-accent-foreground/20 rounded' : ''
           }`}
           onDragOver={onDragOver}
           onDrop={(e) => {

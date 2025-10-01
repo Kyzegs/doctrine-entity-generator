@@ -48,15 +48,15 @@ export function TabbedCodeOutput({ tabs }: TabbedCodeOutputProps) {
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden">
       <Tabs defaultValue={tabs[0]?.id} className="w-full">
-        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-          <TabsList className="h-auto p-1 bg-gray-100">
+        <div className="bg-muted px-4 py-2 border-b border-border">
+          <TabsList className="h-auto p-1 bg-muted">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="px-3 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                className="px-3 py-1.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 {tab.title}
               </TabsTrigger>
@@ -66,11 +66,11 @@ export function TabbedCodeOutput({ tabs }: TabbedCodeOutputProps) {
         
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="m-0">
-            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="font-medium text-gray-900">{tab.title}</h3>
+            <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center">
+              <h3 className="font-medium text-foreground">{tab.title}</h3>
               <button
                 onClick={() => copyToClipboard(tab.code, tab.id)}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
               >
                 {copiedTab === tab.id ? 'Copied!' : 'Copy'}
               </button>

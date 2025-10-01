@@ -38,12 +38,12 @@ export function CodeOutput({ title, code, language }: CodeOutputProps) {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="font-medium text-gray-900">{title}</h3>
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center">
+        <h3 className="font-medium text-foreground">{title}</h3>
         <button
           onClick={copyToClipboard}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
