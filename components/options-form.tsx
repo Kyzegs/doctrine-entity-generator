@@ -160,6 +160,19 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
             </label>
           </div>
           
+          <div>
+            <label htmlFor="useAttributeMapping" className="flex items-center">
+              <input
+                type="checkbox"
+                id="useAttributeMapping"
+                checked={options.useAttributeMapping}
+                onChange={(e) => handleInputChange('useAttributeMapping', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-700">Use Doctrine attributes (PHP 8+) instead of XML mapping</span>
+            </label>
+          </div>
+          
           {/* Column-Field Mappings */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Column-Field Mappings</label>

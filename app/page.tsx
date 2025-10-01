@@ -142,6 +142,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
     { field: 'deletedAt', column: 'deleted', selectedType: 'timestamp' }
   ],
   explicitlyDefineColumns: false,
+  useAttributeMapping: false,
   
   // PHP Entity Class settings
   publicProperties: false,
@@ -181,6 +182,7 @@ export default function Home() {
           customDataTypes: parsedConfig.customDataTypes || DEFAULT_OPTIONS.customDataTypes,
           columnFieldMappings: parsedConfig.columnFieldMappings || DEFAULT_OPTIONS.columnFieldMappings,
           explicitlyDefineColumns: parsedConfig.explicitlyDefineColumns ?? DEFAULT_OPTIONS.explicitlyDefineColumns,
+          useAttributeMapping: parsedConfig.useAttributeMapping ?? DEFAULT_OPTIONS.useAttributeMapping,
           customTraits: parsedConfig.customTraits || DEFAULT_OPTIONS.customTraits
         };
         setOptions(mergedOptions);
@@ -208,6 +210,7 @@ export default function Home() {
         customDataTypes: newOptions.customDataTypes,
         columnFieldMappings: newOptions.columnFieldMappings,
         explicitlyDefineColumns: newOptions.explicitlyDefineColumns,
+        useAttributeMapping: newOptions.useAttributeMapping,
         customTraits: newOptions.customTraits
       };
       localStorage.setItem('entityGeneratorConfig', JSON.stringify(shareableConfig));
@@ -223,6 +226,7 @@ export default function Home() {
     customDataTypes: options.customDataTypes,
     columnFieldMappings: options.columnFieldMappings,
     explicitlyDefineColumns: options.explicitlyDefineColumns,
+    useAttributeMapping: options.useAttributeMapping,
     customTraits: options.customTraits
   });
 
@@ -271,6 +275,7 @@ export default function Home() {
         customDataTypes: importedConfig.customDataTypes,
         columnFieldMappings: importedConfig.columnFieldMappings,
         explicitlyDefineColumns: importedConfig.explicitlyDefineColumns,
+        useAttributeMapping: importedConfig.useAttributeMapping,
         customTraits: importedConfig.customTraits
       };
 
@@ -375,9 +380,13 @@ export default function Home() {
       const suggestions = suggestRelationships(schema);
       setRelationshipSuggestions(suggestions);
       
-      // Generate Doctrine XML mapping
-      const xml = DoctrineXMLGenerator.generate(schema, options);
-      setXmlOutput(xml);
+      // Generate Doctrine XML mapping (only if not using attribute mapping)
+      if (!options.useAttributeMapping) {
+        const xml = DoctrineXMLGenerator.generate(schema, options);
+        setXmlOutput(xml);
+      } else {
+        setXmlOutput('');
+      }
       
       // Generate PHP entity class
       const php = PHPEntityGenerator.generate(schema, options);

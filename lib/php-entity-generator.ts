@@ -1,6 +1,6 @@
 import { TableSchema, TableColumn, GenerationOptions, Relationship } from './types';
 import { ORMMappingUtils, ORMFieldMapping } from './orm-mapping-utils';
-import { PhpFile, PhpNamespace, ClassType, Method, Property, Parameter, PromotedParameter, PsrPrinter } from 'js-php-generator';
+import { PhpFile, PhpNamespace, ClassType, Method, Property, Parameter, PromotedParameter, PsrPrinter, Literal } from 'js-php-generator';
 
 
 export class PHPEntityGenerator {
@@ -26,6 +26,11 @@ export class PHPEntityGenerator {
     namespace_.addUse('Doctrine\\Common\\Collections\\Collection');
     namespace_.addUse('Doctrine\\Common\\Collections\\ArrayCollection');
     
+    // Add Doctrine ORM attribute imports if using attribute mapping
+    if (options.useAttributeMapping) {
+      namespace_.addUse('Doctrine\\ORM\\Mapping', 'ORM');
+    }
+    
     // Add trait imports and collect interfaces
     const selectedTraits = options.selectedTraits || [];
     const traitInterfaces = new Set<string>();
@@ -50,6 +55,12 @@ export class PHPEntityGenerator {
     
     // Create the class
     const class_ = namespace_.addClass(className);
+    
+    // Add Doctrine Entity attribute if using attribute mapping
+    if (options.useAttributeMapping) {
+      class_.addAttribute('ORM\\Entity');
+      class_.addAttribute('ORM\\Table', [new Literal(`name: '${schema.name}'`)]);
+    }
     
     // Add interfaces from traits
     for (const interfaceName of traitInterfaces) {
@@ -112,6 +123,15 @@ export class PHPEntityGenerator {
       this.setVisibilityOnElement(property, visibility);
       property.setType(idColumn.nullable ? `?${phpType}` : phpType);
       
+      // Add Doctrine attributes for ID if using attribute mapping
+      if (options.useAttributeMapping) {
+        property.addAttribute('ORM\\Id');
+        property.addAttribute('ORM\\Column', [new Literal("type: 'integer'")]);
+        if (idColumn.autoIncrement) {
+          property.addAttribute('ORM\\GeneratedValue');
+        }
+      }
+      
       if (idColumn.nullable) {
         property.setValue(null);
       }
@@ -126,6 +146,11 @@ export class PHPEntityGenerator {
       const property = class_.addProperty(field.name);
       this.setVisibilityOnElement(property, visibility);
       property.setType(field.nullable ? `?${field.phpType}` : field.phpType);
+      
+      // Add Doctrine Column attribute if using attribute mapping
+      if (options.useAttributeMapping) {
+        this.addColumnAttribute(property, field, options);
+      }
       
       if (field.nullable) {
         property.setValue(null);
@@ -164,6 +189,11 @@ export class PHPEntityGenerator {
       this.setVisibilityOnElement(property, visibility);
       property.setType(propertyType);
       
+      // Add Doctrine relationship attributes if using attribute mapping
+      if (options.useAttributeMapping) {
+        this.addRelationshipAttribute(property, relationship, schema, options);
+      }
+      
       if (isNullable) {
         property.setValue(null);
       }
@@ -184,6 +214,7 @@ export class PHPEntityGenerator {
     
     const constructor = class_.addMethod('__construct');
     const visibility = options.publicProperties ? 'public' : 'private';
+    const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
     
     // Add required field parameters with property promotion using addPromotedParameter method
     for (const column of constructorData.columns) {
@@ -194,6 +225,24 @@ export class PHPEntityGenerator {
       const param = constructor.addPromotedParameter(fieldName);
       param.setType(phpType);
       this.setVisibilityOnElement(param, visibility);
+      
+      // Add Doctrine attributes if using attribute mapping
+      if (options.useAttributeMapping) {
+        if (column.name === 'id' || column.autoIncrement) {
+          // Add ID attributes
+          param.addAttribute('ORM\\Id');
+          param.addAttribute('ORM\\Column', [new Literal("type: 'integer'")]);
+          if (column.autoIncrement) {
+            param.addAttribute('ORM\\GeneratedValue');
+          }
+        } else {
+          // Add regular column attributes
+          const field = ormMapping.fields.find(f => f.name === fieldName);
+          if (field) {
+            this.addColumnAttribute(param, field, options);
+          }
+        }
+      }
     }
     
     // Add required relationship parameters with property promotion using addPromotedParameter method
@@ -209,6 +258,11 @@ export class PHPEntityGenerator {
       const param = constructor.addPromotedParameter(relationship.field);
       param.setType(paramType);
       this.setVisibilityOnElement(param, visibility);
+      
+      // Add Doctrine relationship attributes if using attribute mapping
+      if (options.useAttributeMapping) {
+        this.addRelationshipAttribute(param, relationship, schema, options);
+      }
     }
   }
 
@@ -496,5 +550,125 @@ export class PHPEntityGenerator {
     
     // Convert table name to PascalCase entity name
     return ORMMappingUtils.toPascalCase(tableName);
+  }
+
+  /**
+   * Converts an object to named parameters syntax for PHP attributes
+   */
+  private static createNamedParams(params: Record<string, any>): string {
+    const parts: string[] = [];
+    for (const [key, value] of Object.entries(params)) {
+      let valueStr: string;
+      if (typeof value === 'string' && !value.endsWith('::class')) {
+        valueStr = `'${value}'`;
+      } else if (typeof value === 'boolean') {
+        valueStr = value ? 'true' : 'false';
+      } else if (Array.isArray(value)) {
+        valueStr = '[' + value.map(v => typeof v === 'string' ? `'${v}'` : v).join(', ') + ']';
+      } else {
+        valueStr = String(value);
+      }
+      parts.push(`${key}: ${valueStr}`);
+    }
+    return parts.join(', ');
+  }
+
+  /**
+   * Adds Doctrine Column attribute to a property or parameter
+   */
+  private static addColumnAttribute(element: any, field: ORMFieldMapping, options: GenerationOptions): void {
+    const attributeArgs: any = {};
+    
+    // Only add type if it's not string (default)
+    if (field.doctrineType !== 'string') {
+      attributeArgs.type = field.doctrineType;
+    }
+    
+    // Add column name if explicitly defined or if it differs from field name
+    const customMapping = options.columnFieldMappings.find(mapping => mapping.field === field.name);
+    const shouldIncludeColumn = options.explicitlyDefineColumns || (customMapping && customMapping.column);
+    if (shouldIncludeColumn) {
+      attributeArgs.name = field.columnName;
+    }
+    
+    // Add length for string/text types if available
+    if (field.length && (field.doctrineType === 'string' || field.doctrineType === 'text')) {
+      attributeArgs.length = field.length;
+    }
+    
+    // Add nullable if true
+    if (field.nullable) {
+      attributeArgs.nullable = true;
+    }
+    
+    // Add enum class if specified
+    if (field.enumClass) {
+      attributeArgs.enumType = field.enumClass;
+    }
+    
+    // Only add the attribute if there are arguments
+    if (Object.keys(attributeArgs).length > 0) {
+      element.addAttribute('ORM\\Column', [new Literal(this.createNamedParams(attributeArgs))]);
+    } else {
+      element.addAttribute('ORM\\Column');
+    }
+  }
+
+  /**
+   * Adds Doctrine relationship attribute to a property or parameter
+   */
+  private static addRelationshipAttribute(element: any, relationship: Relationship, schema: TableSchema, options: GenerationOptions): void {
+    const targetEntity = relationship.targetEntityNamespace 
+      ? `${relationship.targetEntityNamespace}\\\\${relationship.targetEntity}`
+      : `${options.namespace}\\\\${relationship.targetEntity}`;
+    
+    // Map relationship type to Doctrine attribute name
+    const relationshipTypeMap: Record<string, string> = {
+      'one-to-one': 'OneToOne',
+      'one-to-many': 'OneToMany',
+      'many-to-one': 'ManyToOne',
+      'many-to-many': 'ManyToMany'
+    };
+    
+    const attributeName = relationshipTypeMap[relationship.type];
+    const attributeArgs: any = { targetEntity: `${relationship.targetEntity}::class` };
+    
+    // Add mappedBy or inversedBy
+    if (relationship.mappedBy) {
+      attributeArgs.mappedBy = relationship.mappedBy;
+    }
+    if (relationship.inversedBy) {
+      attributeArgs.inversedBy = relationship.inversedBy;
+    }
+    
+    // Add fetch if not LAZY (default)
+    if (relationship.fetch && relationship.fetch !== 'LAZY') {
+      attributeArgs.fetch = relationship.fetch;
+    }
+    
+    // Add orphanRemoval if true
+    if (relationship.orphanRemoval) {
+      attributeArgs.orphanRemoval = true;
+    }
+    
+    // Add cascade operations
+    if (relationship.cascade && relationship.cascade.length > 0) {
+      attributeArgs.cascade = relationship.cascade;
+    }
+    
+    element.addAttribute(`ORM\\${attributeName}`, [new Literal(this.createNamedParams(attributeArgs))]);
+    
+    // Add JoinColumn for many-to-one and one-to-one relationships
+    if (relationship.joinColumn && (relationship.type === 'many-to-one' || relationship.type === 'one-to-one')) {
+      const joinColumnArgs: any = { name: relationship.joinColumn };
+      
+      // Check if the corresponding SQL column is nullable
+      const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
+      if (correspondingColumn) {
+        joinColumnArgs.nullable = correspondingColumn.nullable;
+      }
+      
+      element.addAttribute('ORM\\JoinColumn', [new Literal(this.createNamedParams(joinColumnArgs))]);
+    }
   }
 }

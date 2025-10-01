@@ -93,6 +93,7 @@ export interface GenerationOptions {
   customDataTypes: CustomDataType[];
   columnFieldMappings: ColumnFieldMapping[];
   explicitlyDefineColumns: boolean;
+  useAttributeMapping: boolean; // Use Doctrine attributes instead of XML mapping
   
   // PHP Entity Class settings
   publicProperties: boolean;
@@ -117,5 +118,6 @@ export interface ShareableConfiguration {
   customDataTypes: CustomDataType[];
   columnFieldMappings: ColumnFieldMapping[];
   explicitlyDefineColumns: boolean;
+  useAttributeMapping: boolean;
   customTraits: CustomTrait[];
 }
