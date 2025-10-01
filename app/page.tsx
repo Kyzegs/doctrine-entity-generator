@@ -7,6 +7,7 @@ import { PHPEntityGenerator } from '@/lib/php-entity-generator';
 import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
 import { TabbedCodeOutput } from '@/components/tabbed-code-output';
 import { OptionsForm } from '@/components/options-form';
+import { RelationshipSuggestionsPopup } from '@/components/relationship-suggestions-popup';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -170,6 +171,7 @@ export default function Home() {
   const [phpOutput, setPhpOutput] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
   const [relationshipSuggestions, setRelationshipSuggestions] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('xml');
 
   // Load from localStorage after hydration
   useEffect(() => {
@@ -417,6 +419,7 @@ export default function Home() {
         setXmlOutput(xml);
       } else {
         setXmlOutput('');
+        setActiveTab('php');
       }
       
       // Generate PHP entity class
@@ -552,39 +555,6 @@ export default function Home() {
               </Button>
             </div>
 
-            {/* Relationship Suggestions */}
-            {relationshipSuggestions.length > 0 && (
-              <div className="bg-accent border border-accent-foreground/20 rounded-md p-4">
-                <h3 className="text-lg font-medium text-accent-foreground mb-3">
-                  Suggested Relationships
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  The following fields ending with "_id" were detected and can be configured as relationships:
-                </p>
-                <div className="space-y-2">
-                  {relationshipSuggestions.map((suggestion, index) => (
-                    <div key={`suggestion-${suggestion.field}-${suggestion.column}-${index}`} className="flex items-center justify-between p-3 bg-card rounded border border-border">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-card-foreground">
-                          {suggestion.field} → {suggestion.targetEntity}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Column: {suggestion.column} | Type: {suggestion.type}
-                          {suggestion.isNullable && ' | Nullable'}
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => addSuggestedRelationship(suggestion)}
-                        size="sm"
-                        className="ml-3"
-                      >
-                        Add Relationship
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="space-y-6">
@@ -604,11 +574,20 @@ export default function Home() {
                     language: 'php'
                   }] : [])
                 ]}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
               />
             )}
           </div>
         </div>
       </div>
+
+      {/* Relationship Suggestions Popup */}
+      <RelationshipSuggestionsPopup
+        suggestions={relationshipSuggestions}
+        onAddSuggestion={addSuggestedRelationship}
+        onDismiss={() => setRelationshipSuggestions([])}
+      />
     </div>
   );
 }

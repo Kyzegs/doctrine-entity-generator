@@ -39,7 +39,7 @@ export function CodeOutput({ title, code, language }: CodeOutputProps) {
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center">
+      <div className="bg-muted px-4 py-2 flex justify-between items-center">
         <h3 className="font-medium text-foreground">{title}</h3>
         <button
           onClick={copyToClipboard}

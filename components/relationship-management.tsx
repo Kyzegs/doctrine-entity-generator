@@ -86,8 +86,7 @@ export function RelationshipManagement({
               subtitle={`${relationship.type} → ${relationship.targetEntity}`}
               onRemove={() => handleRemoveRelationship(relationshipIndex)}
               showDragHandle={false}
-              showOrderNumber={true}
-              orderNumber={relationshipIndex + 1}
+              showOrderNumber={false}
 
             >
             {/* Relationship Basic Info */}

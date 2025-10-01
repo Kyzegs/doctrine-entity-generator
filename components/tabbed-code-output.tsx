@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 interface CodeTab {
   id: string;
@@ -14,9 +15,11 @@ interface CodeTab {
 
 interface TabbedCodeOutputProps {
   tabs: CodeTab[];
+  activeTab?: string;
+  onTabChange?: (tabId: string) => void;
 }
 
-export function TabbedCodeOutput({ tabs }: TabbedCodeOutputProps) {
+export function TabbedCodeOutput({ tabs, activeTab, onTabChange }: TabbedCodeOutputProps) {
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
 
   const copyToClipboard = async (code: string, tabId: string) => {
@@ -49,9 +52,13 @@ export function TabbedCodeOutput({ tabs }: TabbedCodeOutputProps) {
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      <Tabs defaultValue={tabs[0]?.id} className="w-full">
-        <div className="bg-muted px-4 py-2 border-b border-border">
-          <TabsList className="h-auto p-1 bg-muted">
+      <Tabs 
+        value={activeTab || tabs[0]?.id} 
+        onValueChange={onTabChange}
+        className="w-full gap-0"
+      >
+        <div className="bg-card px-4 py-2">
+          <TabsList className="h-auto p-1 bg-card">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
@@ -62,11 +69,10 @@ export function TabbedCodeOutput({ tabs }: TabbedCodeOutputProps) {
               </TabsTrigger>
             ))}
           </TabsList>
-        </div>
-        
+        </div>  
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="m-0">
-            <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center">
+            <div className="bg-muted px-4 py-2 flex justify-between items-center">
               <h3 className="font-medium text-foreground">{tab.title}</h3>
               <button
                 onClick={() => copyToClipboard(tab.code, tab.id)}

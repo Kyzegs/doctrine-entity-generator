@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
-import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, Trash2 } from 'lucide-react';
 
 interface CollapsibleSectionProps {
   id: string;
@@ -81,26 +81,21 @@ export function CollapsibleSection({
             )}
           </div>
         </div>
-        
-        {/* Header Toggle (if provided) */}
-        {headerToggle && (
-          <div className="flex items-center">
-            {headerToggle}
-          </div>
-        )}
-        
         {/* Actions */}
         <div className="flex items-center space-x-2">
-          {showOrderNumber && (
-            <span className="text-sm text-muted-foreground">#{orderNumber}</span>
+          {/* Header Toggle (if provided) */}
+          {headerToggle && (
+            <div className="flex items-center">
+              {headerToggle}
+            </div>
           )}
           {onRemove && (
             <button
               type="button"
               onClick={onRemove}
-              className="px-2 py-1 text-destructive hover:text-destructive/80 text-sm"
+              className="p-1 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded transition-colors"
             >
-              Remove
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
         </div>

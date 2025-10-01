@@ -1,7 +1,7 @@
 'use client';
 
 import { GenerationOptions, ColumnFieldMapping, CustomDataType, Relationship, CustomTrait } from '@/lib/types';
-import { useState } from 'react';
+import { useState, memo, useCallback, ChangeEvent } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,39 +11,115 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TraitManagement } from './trait-management';
 import { RelationshipManagement } from './relationship-management';
 
+// Memoized Basic Settings Section
+const BasicSettings = memo(({ 
+  namespace, 
+  entityPrefix, 
+  entitySuffix, 
+  entityName,
+  onFieldChange 
+}: {
+  namespace: string;
+  entityPrefix: string;
+  entitySuffix: string;
+  entityName: string;
+  onFieldChange: (field: string, value: string) => void;
+}) => {
+  return (
+    <div>
+      <h4 className="font-medium text-foreground mb-3">Basic Settings</h4>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="namespace" className="block text-sm font-medium mb-2">
+            Namespace
+          </Label>
+          <Input
+            id="namespace"
+            type="text"
+            value={namespace}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('namespace', e.target.value)}
+            placeholder="e.g., App\Entity"
+            className="text-sm"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="entityName" className="block text-sm font-medium mb-2">
+            Entity Name Override
+          </Label>
+          <Input
+            id="entityName"
+            type="text"
+            value={entityName}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('entityName', e.target.value)}
+            placeholder="Leave empty to use table name"
+            className="text-sm"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="entityPrefix" className="block text-sm font-medium mb-2">
+            Entity Prefix
+          </Label>
+          <Input
+            id="entityPrefix"
+            type="text"
+            value={entityPrefix}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('entityPrefix', e.target.value)}
+            placeholder="e.g., Base"
+            className="text-sm"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="entitySuffix" className="block text-sm font-medium mb-2">
+            Entity Suffix
+          </Label>
+          <Input
+            id="entitySuffix"
+            type="text"
+            value={entitySuffix}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('entitySuffix', e.target.value)}
+            placeholder="e.g., Entity"
+            className="text-sm"
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
+
 interface OptionsFormProps {
   options: GenerationOptions;
   onChange: (options: GenerationOptions) => void;
 }
 
-export function OptionsForm({ options, onChange }: OptionsFormProps) {
+function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
   // Initialize all traits as collapsed by default
 
   
   const [draggedTraitId, setDraggedTraitId] = useState<string | null>(null);
   
-  const handleInputChange = (field: keyof GenerationOptions, value: string | boolean | ColumnFieldMapping[] | CustomDataType[] | Relationship[] | string[] | CustomTrait[]) => {
+  const handleInputChange = useCallback((field: keyof GenerationOptions, value: string | boolean | ColumnFieldMapping[] | CustomDataType[] | Relationship[] | string[] | CustomTrait[]) => {
     onChange({
       ...options,
       [field]: value,
     });
-    
-
-  };
+  }, [options, onChange]);
   
 
   
-  const handleDragStart = (e: React.DragEvent, traitId: string) => {
+  const handleDragStart = useCallback((e: React.DragEvent, traitId: string) => {
     setDraggedTraitId(traitId);
     e.dataTransfer.effectAllowed = 'move';
-  };
+  }, []);
   
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-  };
+  }, []);
   
-  const handleDrop = (e: React.DragEvent, targetTraitId: string) => {
+  const handleDrop = useCallback((e: React.DragEvent, targetTraitId: string) => {
     e.preventDefault();
     
     if (!draggedTraitId || draggedTraitId === targetTraitId) {
@@ -62,11 +138,11 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
     }
     
     setDraggedTraitId(null);
-  };
+  }, [draggedTraitId, options.customTraits, handleInputChange]);
   
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setDraggedTraitId(null);
-  };
+  }, []);
 
   return (
     <div className="space-y-6 p-4 border border-border rounded-lg bg-card">
@@ -251,11 +327,13 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
                   />
                   <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => {
                       const newMappings = options.columnFieldMappings.filter((_, i) => i !== index);
                       handleInputChange('columnFieldMappings', newMappings);
                     }}
-                    className="p-2 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded-md transition-colors flex-shrink-0"
+                    className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                     title="Remove mapping"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -310,11 +388,13 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
                   />
                   <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => {
                       const newDataTypes = options.customDataTypes.filter((_, i) => i !== index);
                       handleInputChange('customDataTypes', newDataTypes);
                     }}
-                    className="p-2 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded-md transition-colors flex-shrink-0"
+                    className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                     title="Remove data type"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -418,3 +498,18 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
     </div>
   );
 }
+
+// Custom comparison function for deep equality check
+function arePropsEqual(prevProps: OptionsFormProps, nextProps: OptionsFormProps) {
+  // If the onChange function reference changed, don't re-render
+  // (the function is memoized with useCallback so this shouldn't happen)
+  if (prevProps.onChange !== nextProps.onChange) {
+    return false;
+  }
+  
+  // Deep comparison of options object
+  return JSON.stringify(prevProps.options) === JSON.stringify(nextProps.options);
+}
+
+// Memoize the component with custom comparison to prevent re-renders when options haven't actually changed
+export const OptionsForm = memo(OptionsFormComponent, arePropsEqual);

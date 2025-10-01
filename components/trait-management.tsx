@@ -155,8 +155,7 @@ export function TraitManagement({
               subtitle={trait.description}
               onRemove={() => handleRemoveTrait(traitIndex)}
               showDragHandle={true}
-              showOrderNumber={true}
-              orderNumber={traitIndex + 1}
+              showOrderNumber={false}
               onDragStart={(e) => onDragStart(e, trait.id)}
               onDragOver={onDragOver}
               onDrop={(e) => onDrop(e, trait.id)}
@@ -289,8 +288,8 @@ export function TraitManagement({
                         type="button"
                         onClick={() => handleRemoveProperty(traitIndex, propIndex)}
                         variant="ghost"
-                        size="sm"
-                        className="p-1 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         title="Remove property"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -328,8 +327,8 @@ export function TraitManagement({
                         type="button"
                         onClick={() => handleRemoveInterface(traitIndex, interfaceIndex)}
                         variant="ghost"
-                        size="sm"
-                        className="p-1 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         title="Remove interface"
                       >
                         <Trash2 className="w-3 h-3" />
