@@ -114,8 +114,7 @@ export function TraitManagement({
       <Button
         type="button"
         onClick={handleAddTrait}
-        variant="secondary"
-        className="mb-4"
+        className="mb-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm"
       >
         Add New Trait
       </Button>

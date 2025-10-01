@@ -7,20 +7,17 @@ import { PHPEntityGenerator } from '@/lib/php-entity-generator';
 import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
 import { TabbedCodeOutput } from '@/components/tabbed-code-output';
 import { OptionsForm } from '@/components/options-form';
-import { RelationshipSuggestionsPopup } from '@/components/relationship-suggestions-popup';
 import { AppSidebar } from '@/components/app-sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Download, Upload, Clipboard, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EXAMPLE_SQL = {
@@ -552,58 +549,75 @@ export default function Home() {
       </div>
 
       {/* Fixed Bottom Container */}
-      <div className="fixed bottom-0 right-0 left-0 lg:left-[var(--sidebar-width)] z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="fixed bottom-0 right-0 left-0 md:left-[var(--sidebar-width)] z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="p-4">
-          {/* Relationship Suggestions */}
-          {relationshipSuggestions.length > 0 && (
-            <div className="mb-3 p-3 bg-accent/50 border border-accent-foreground/20 rounded-lg">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    Suggested Relationships
-                    <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                      {relationshipSuggestions.length}
-                    </span>
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {relationshipSuggestions.slice(0, 3).map((suggestion, index) => (
-                      <button
-                        key={`suggestion-${suggestion.field}-${index}`}
-                        onClick={() => addSuggestedRelationship(suggestion)}
-                        className="text-sm px-3 py-1.5 bg-background border border-border rounded-md hover:bg-accent transition-colors"
-                      >
-                        <span className="font-medium">{suggestion.field}</span>
-                        <span className="text-muted-foreground mx-1">→</span>
-                        <span className="text-muted-foreground">{suggestion.targetEntity}</span>
-                      </button>
-                    ))}
-                    {relationshipSuggestions.length > 3 && (
-                      <span className="text-sm text-muted-foreground px-2 py-1.5">
-                        +{relationshipSuggestions.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setRelationshipSuggestions([])}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="sr-only">Dismiss</span>
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Generate Code Button */}
           <div className="flex items-center gap-4">
+            {/* Generate Code Button */}
             <Button
               onClick={generateCode}
               size="lg"
-              className="flex-1 lg:flex-none lg:min-w-[200px]"
+              className="shrink-0"
             >
               Generate Code
             </Button>
+
+            {/* Relationship Suggestions Popover */}
+            {relationshipSuggestions.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="lg" className="gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                    </span>
+                    Relationship Suggestions
+                    <span className="ml-1 px-1.5 py-0.5 bg-muted text-muted-foreground text-xs rounded-full">
+                      {relationshipSuggestions.length}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96 p-0" align="start" side="top">
+                  <div className="p-4 border-b">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Suggested Relationships</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRelationshipSuggestions([])}
+                        className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                      >
+                        Dismiss All
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Fields ending with "_id" detected in your SQL
+                    </p>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto p-2">
+                    {relationshipSuggestions.map((suggestion, index) => (
+                      <button
+                        key={`suggestion-${suggestion.field}-${index}`}
+                        onClick={() => addSuggestedRelationship(suggestion)}
+                        className="w-full text-left p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">
+                              {suggestion.field} → {suggestion.targetEntity}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Column: {suggestion.column} | Type: {suggestion.type}
+                              {suggestion.isNullable && ' | Nullable'}
+                            </div>
+                          </div>
+                          <div className="ml-2 text-xs text-primary">Add →</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         </div>
       </div>

@@ -48,6 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Preset, GenerationOptions, ShareableConfiguration } from "@/lib/types";
+import { useVersion } from "@/hooks/use-version";
 import { toast } from "sonner";
 
 interface AppSidebarProps {
@@ -67,6 +68,7 @@ export function AppSidebar({
   onImportFromFile,
   onImportFromClipboard,
 }: AppSidebarProps) {
+  const { displayVersion } = useVersion();
   const [presets, setPresets] = React.useState<Preset[]>(() => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('entityGeneratorPresets');
@@ -330,14 +332,10 @@ export function AppSidebar({
         </SidebarContent>
 
         <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton className="text-xs text-sidebar-foreground/70 hover:bg-transparent cursor-default">
-                <Settings2 className="h-3 w-3" />
-                <span>v1.0.0</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <div className="flex items-center gap-2 px-2 py-2 text-xs text-sidebar-foreground/70">
+            <Settings2 className="h-3 w-3" />
+            <span>{displayVersion}</span>
+          </div>
         </SidebarFooter>
       </Sidebar>
 
