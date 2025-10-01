@@ -50,6 +50,34 @@ export class SQLParser {
     }
   }
 
+  /**
+   * Extract column name from node-sql-parser format
+   * Handles both string and object formats according to node-sql-parser documentation
+   */
+  static extractColumnName(columnDef: any): string {
+    if (typeof columnDef === 'string') {
+      return columnDef;
+    }
+    
+    if (columnDef && typeof columnDef === 'object') {
+      // Handle node-sql-parser format: {expr: {type: "column_ref", column: "name"}}
+      if (columnDef.expr && columnDef.expr.type === 'column_ref' && columnDef.expr.column) {
+        return columnDef.expr.column;
+      } else if (columnDef.expr && columnDef.expr.value) {
+        // Fallback for other expr structures
+        return columnDef.expr.value;
+      } else if (columnDef.column) {
+        return columnDef.column;
+      } else {
+        console.warn('Unexpected column name structure:', columnDef);
+        return String(columnDef);
+      }
+    }
+    
+    console.warn('Unexpected column name structure:', columnDef);
+    return String(columnDef);
+  }
+
   private static extractTableName(createTable: any): string {
     if (createTable.table && createTable.table[0]) {
       const table = createTable.table[0];
@@ -82,7 +110,8 @@ export class SQLParser {
       return null;
     }
 
-    const name = def.column.column; // The column name is in def.column.column
+    // Extract column name using the utility function
+    const name = this.extractColumnName(def.column.column);
     const typeInfo = this.parseDataType(def.definition); // Data type info is in def.definition
     
     // Parse column attributes

@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Download, Upload, Clipboard, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 
 const EXAMPLE_SQL = {
   mysql: `CREATE TABLE \`boarding\` (
@@ -167,7 +168,6 @@ export default function Home() {
   const [options, setOptions] = useState<GenerationOptions>(DEFAULT_OPTIONS);
   const [xmlOutput, setXmlOutput] = useState('');
   const [phpOutput, setPhpOutput] = useState('');
-  const [error, setError] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
   const [relationshipSuggestions, setRelationshipSuggestions] = useState<any[]>([]);
 
@@ -321,23 +321,40 @@ export default function Home() {
   const suggestRelationships = (schema: any) => {
     const suggestions: any[] = [];
     
+    // Safety check for schema structure
+    if (!schema || !schema.columns || !Array.isArray(schema.columns)) {
+      console.warn('Invalid schema structure:', schema);
+      return suggestions;
+    }
+    
     // Find columns ending with _id that aren't already configured as relationships
-    const idColumns = schema.columns.filter((col: any) => 
-      col.name.endsWith('_id') && 
-      col.name !== 'id' &&
-      !options.relationships.some(rel => rel.joinColumn === col.name)
-    );
+    const idColumns = schema.columns.filter((col: any) => {
+      // Add safety checks
+      if (!col || typeof col !== 'object') {
+        console.warn('Invalid column object:', col);
+        return false;
+      }
+      
+      // Extract column name using the utility function
+      const columnName = SQLParser.extractColumnName(col.name);
+      
+      return columnName.endsWith('_id') && 
+        columnName !== 'id' &&
+        !options.relationships.some(rel => rel.joinColumn === columnName);
+    });
     
     for (const column of idColumns) {
-      const baseName = column.name.replace(/_id$/, '');
+      // Extract the actual column name using the utility function
+      const columnName = SQLParser.extractColumnName(column.name);
+      const baseName = columnName.replace(/_id$/, '');
       const entityName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
       
       suggestions.push({
-        column: column.name,
+        column: columnName,
         field: baseName,
         targetEntity: entityName,
         type: 'many-to-one' as const,
-        joinColumn: column.name,
+        joinColumn: columnName,
         cascade: ['persist', 'merge'],
         fetch: 'LAZY' as const,
         isNullable: column.nullable
@@ -373,16 +390,26 @@ export default function Home() {
 
   const generateCode = () => {
     try {
-      setError('');
-      
-      console.log('Generating code with options:', options);
-      
       // Parse the SQL with the selected database dialect
       const schema = SQLParser.parseCreateTable(sqlInput, options.databaseDialect);
       
+      // Check if the SQL is a CREATE TABLE statement
+      const trimmedSql = sqlInput.trim().toLowerCase();
+      if (!trimmedSql.startsWith('create table')) {
+        toast.error('Invalid SQL Statement', {
+          description: 'Please provide a valid CREATE TABLE statement. Only CREATE TABLE statements are supported.',
+        });
+        return;
+      }
+      
       // Generate relationship suggestions
-      const suggestions = suggestRelationships(schema);
-      setRelationshipSuggestions(suggestions);
+      try {
+        const suggestions = suggestRelationships(schema);
+        setRelationshipSuggestions(suggestions);
+      } catch (suggestionError) {
+        console.warn('Failed to generate relationship suggestions:', suggestionError);
+        setRelationshipSuggestions([]);
+      }
       
       // Generate Doctrine XML mapping (only if not using attribute mapping)
       if (!options.useAttributeMapping) {
@@ -396,8 +423,13 @@ export default function Home() {
       const php = PHPEntityGenerator.generate(schema, options);
       setPhpOutput(php);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       console.error('Error generating code:', err);
+      
+      // Show error toast
+      toast.error('Code Generation Failed', {
+        description: errorMessage,
+      });
     }
   };
 
@@ -519,12 +551,6 @@ export default function Home() {
                 Generate Code
               </Button>
             </div>
-
-            {error && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
-                <p className="text-destructive">{error}</p>
-              </div>
-            )}
 
             {/* Relationship Suggestions */}
             {relationshipSuggestions.length > 0 && (
