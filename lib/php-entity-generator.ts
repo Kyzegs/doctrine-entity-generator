@@ -35,9 +35,9 @@ export class PHPEntityGenerator {
     const selectedTraits = options.selectedTraits || [];
     const traitInterfaces = new Set<string>();
     
-    for (const traitName of selectedTraits) {
-      const trait = options.customTraits.find(t => t.name === traitName);
-      if (trait) {
+    for (const traitId of selectedTraits) {
+      const trait = options.customTraits.find(t => t.id === traitId);
+      if (trait && trait.name) {
         namespace_.addUse(`${trait.namespace}\\${trait.name}`);
         trait.requiredInterfaces.forEach(iface => traitInterfaces.add(iface));
       }
@@ -69,7 +69,7 @@ export class PHPEntityGenerator {
     
     // Add traits
     const selectedTraitsInOrder = (options.customTraits || [])
-      .filter(trait => selectedTraits.includes(trait.name))
+      .filter(trait => selectedTraits.includes(trait.id) && trait.name)
       .map(trait => trait.name);
     
     for (const traitName of selectedTraitsInOrder) {
@@ -406,8 +406,8 @@ export class PHPEntityGenerator {
   private static getTraitProperties(selectedTraits: string[], options: GenerationOptions): Set<string> {
     const traitProperties = new Set<string>();
     
-    for (const traitName of selectedTraits) {
-      const trait = options.customTraits.find(t => t.name === traitName);
+    for (const traitId of selectedTraits) {
+      const trait = options.customTraits.find(t => t.id === traitId);
       if (trait) {
         trait.properties.forEach(property => {
           traitProperties.add(property.name);
@@ -421,8 +421,8 @@ export class PHPEntityGenerator {
   private static getTraitMethods(selectedTraits: string[], options: GenerationOptions): Set<string> {
     const traitMethods = new Set<string>();
     
-    for (const traitName of selectedTraits) {
-      const trait = options.customTraits.find(t => t.name === traitName);
+    for (const traitId of selectedTraits) {
+      const trait = options.customTraits.find(t => t.id === traitId);
       if (trait) {
         trait.properties.forEach(property => {
           if (property.hasGetter === true) {

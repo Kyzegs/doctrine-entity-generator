@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "scan": "next dev & npx react-scan@latest localhost:3001"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",

@@ -229,11 +229,13 @@ export function OptionsForm({ options, onChange }: OptionsFormProps) {
                       <SelectItem value="float">float</SelectItem>
                       <SelectItem value="json">json</SelectItem>
                       <SelectItem value="text">text</SelectItem>
-                      {options.customDataTypes.map((dataType) => (
-                        <SelectItem key={dataType.name} value={dataType.name}>
-                          {dataType.name} ({dataType.phpType})
-                        </SelectItem>
-                      ))}
+                      {options.customDataTypes
+                        .filter((dataType) => dataType.name.trim() !== '')
+                        .map((dataType) => (
+                          <SelectItem key={dataType.name} value={dataType.name}>
+                            {dataType.name} ({dataType.phpType})
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <Input

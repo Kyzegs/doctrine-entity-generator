@@ -102,23 +102,26 @@ export function TraitManagement({
   };
 
   return (
-    <div className="border-t border-border pt-4">
-      <h4 className="font-medium text-foreground mb-3">Custom Traits Management</h4>
-      <p className="text-sm text-muted-foreground mb-3">
-        Create and manage custom traits for your entities. Each trait can have properties with getter/setter toggles and required interfaces.
-      </p>
+    <div className="border-t border-border pt-6">
+      <div className="mb-6">
+        <h4 className="font-medium text-foreground mb-2">Custom Traits Management</h4>
+        <p className="text-sm text-muted-foreground">
+          Create and manage custom traits for your entities. Each trait can have properties with getter/setter toggles and required interfaces.
+        </p>
+      </div>
       
       {/* Add New Trait Button */}
       <Button
         type="button"
         onClick={handleAddTrait}
-        className="mb-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 text-sm"
+        variant="secondary"
+        className="mb-4"
       >
         Add New Trait
       </Button>
       
       {/* Traits List */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {(options.customTraits || []).map((trait, traitIndex) => (
           <div key={trait.id}>
             {/* Drop zone before each trait */}
@@ -163,20 +166,19 @@ export function TraitManagement({
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id={`use-trait-${trait.id}`}
-                    checked={options.selectedTraits?.includes(trait.name) || false}
+                    checked={options.selectedTraits?.includes(trait.id) || false}
                     onCheckedChange={(checked) => {
                       const currentTraits = options.selectedTraits || [];
                       let newTraits: string[];
                       
                       if (checked) {
-                        newTraits = [...currentTraits, trait.name];
+                        newTraits = [...currentTraits, trait.id];
                       } else {
-                        newTraits = currentTraits.filter(t => t !== trait.name);
+                        newTraits = currentTraits.filter(t => t !== trait.id);
                       }
                       
                       onOptionsChange({ ...options, selectedTraits: newTraits });
                     }}
-                    disabled={!trait.name}
                   />
                   <Label htmlFor={`use-trait-${trait.id}`} className="text-sm">
                     Use trait
@@ -191,47 +193,50 @@ export function TraitManagement({
                   value={trait.name}
                   onChange={(e) => handleTraitChange(traitIndex, 'name', e.target.value)}
                   placeholder="Trait name (e.g., TimestampableTrait)"
-                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
+                  className="text-sm"
                 />
                 <Input
                   type="text"
                   value={trait.displayName}
                   onChange={(e) => handleTraitChange(traitIndex, 'displayName', e.target.value)}
                   placeholder="Display name (e.g., Timestampable)"
-                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
+                  className="text-sm"
                 />
                 <Input
                   type="text"
                   value={trait.namespace}
                   onChange={(e) => handleTraitChange(traitIndex, 'namespace', e.target.value)}
                   placeholder="Namespace (e.g., App\\Traits)"
-                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
+                  className="text-sm"
                 />
                 <Input
                   type="text"
                   value={trait.description}
                   onChange={(e) => handleTraitChange(traitIndex, 'description', e.target.value)}
                   placeholder="Description"
-                  className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-sm text-foreground min-w-0"
+                  className="text-sm"
                 />
               </div>
               
 
               
               {/* Properties Management */}
-              <div className="mb-4">
-                <h6 className="font-medium text-foreground mb-2">Properties</h6>
-                <Button
-                  type="button"
-                  onClick={() => handleAddProperty(traitIndex)}
-                  className="mb-2 px-2 py-1 bg-primary text-secondary-foreground rounded text-xs hover:bg-primary/90"
-                >
-                  Add Property
-                </Button>
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h6 className="font-medium text-foreground">Properties</h6>
+                  <Button
+                    type="button"
+                    onClick={() => handleAddProperty(traitIndex)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Add Property
+                  </Button>
+                </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {trait.properties.map((property, propIndex) => (
-                    <div key={`property-${trait.id}-${propIndex}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-2 p-2 border border-border rounded items-center">
+                    <div key={`property-${trait.id}-${propIndex}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-3 p-3 border border-border rounded-lg bg-card items-center">
                       <Input
                         type="text"
                         value={property.name}
@@ -283,7 +288,9 @@ export function TraitManagement({
                       <Button
                         type="button"
                         onClick={() => handleRemoveProperty(traitIndex, propIndex)}
-                        className="p-1 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded transition-colors flex-shrink-0"
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                         title="Remove property"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -294,30 +301,35 @@ export function TraitManagement({
               </div>
               
               {/* Required Interfaces Management */}
-              <div className="mb-4">
-                <h6 className="font-medium text-foreground mb-2">Required Interfaces</h6>
-                <Button
-                  type="button"
-                  onClick={() => handleAddInterface(traitIndex)}
-                  className="mb-2 px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs hover:bg-secondary/90"
-                >
-                  Add Interface
-                </Button>
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h6 className="font-medium text-foreground">Required Interfaces</h6>
+                  <Button
+                    type="button"
+                    onClick={() => handleAddInterface(traitIndex)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Add Interface
+                  </Button>
+                </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {trait.requiredInterfaces.map((interfaceName, interfaceIndex) => (
-                    <div key={`interface-${trait.id}-${interfaceIndex}`} className="flex items-center space-x-2 p-2 border border-border rounded">
+                    <div key={`interface-${trait.id}-${interfaceIndex}`} className="flex items-center space-x-3 p-3 border border-border rounded-lg bg-card">
                       <Input
                         type="text"
                         value={interfaceName}
                         onChange={(e) => handleInterfaceChange(traitIndex, interfaceIndex, e.target.value)}
                         placeholder="Interface name (e.g., TimestampableInterface)"
-                        className="flex-1 px-2 py-1 border border-input rounded text-xs text-foreground min-w-0"
+                        className="flex-1 text-xs"
                       />
                       <Button
                         type="button"
                         onClick={() => handleRemoveInterface(traitIndex, interfaceIndex)}
-                        className="p-1 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded transition-colors flex-shrink-0"
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                         title="Remove interface"
                       >
                         <Trash2 className="w-3 h-3" />

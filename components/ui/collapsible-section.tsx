@@ -39,17 +39,17 @@ export function CollapsibleSection({
   const [isCollapsed, setIsCollapsed] = useState(true);
   return (
     <div 
-      className={`border border-gray-200 rounded-lg ${isDragged ? 'opacity-50' : ''}`}
+      className={`border border-border rounded-lg ${isDragged ? 'opacity-50' : ''}`}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
       {/* Header - Always Visible */}
-      <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 bg-muted">
         <div className="flex items-center space-x-3">
           {/* Drag Handle */}
           {showDragHandle && (
             <div 
-              className="cursor-move text-gray-400 hover:text-gray-600"
+              className="cursor-move text-muted-foreground hover:text-foreground"
               draggable
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
@@ -62,7 +62,7 @@ export function CollapsibleSection({
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-gray-500 hover:text-gray-700 transition-transform duration-200"
+            className="text-muted-foreground hover:text-foreground transition-colors duration-200"
           >
             {isCollapsed ? (
               <ChevronRight className="w-5 h-5" />
@@ -73,11 +73,11 @@ export function CollapsibleSection({
           
           {/* Title */}
           <div>
-            <h5 className="font-medium text-gray-900">
+            <h5 className="font-medium text-foreground">
               {title}
             </h5>
             {subtitle && (
-              <p className="text-sm text-gray-500">{subtitle}</p>
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
             )}
           </div>
         </div>
@@ -92,13 +92,13 @@ export function CollapsibleSection({
         {/* Actions */}
         <div className="flex items-center space-x-2">
           {showOrderNumber && (
-            <span className="text-sm text-gray-500">#{orderNumber}</span>
+            <span className="text-sm text-muted-foreground">#{orderNumber}</span>
           )}
           {onRemove && (
             <button
               type="button"
               onClick={onRemove}
-              className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+              className="px-2 py-1 text-destructive hover:text-destructive/80 text-sm"
             >
               Remove
             </button>
