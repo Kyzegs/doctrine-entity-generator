@@ -8,6 +8,7 @@ import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
 import { TabbedCodeOutput } from '@/components/tabbed-code-output';
 import { OptionsForm } from '@/components/options-form';
 import { RelationshipSuggestionsPopup } from '@/components/relationship-suggestions-popup';
+import { PresetManager } from '@/components/preset-manager';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -490,6 +491,21 @@ export default function Home() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Preset Manager */}
+            {isHydrated && (
+              <PresetManager
+                currentOptions={options}
+                onLoadPreset={(loadedOptions) => {
+                  setOptions(loadedOptions);
+                  saveOptionsToLocalStorage(loadedOptions);
+                  // Update SQL example if dialect changed
+                  if (loadedOptions.databaseDialect !== options.databaseDialect) {
+                    updateSqlForDialect(loadedOptions.databaseDialect);
+                  }
+                }}
+              />
+            )}
 
             {/* Theme Toggle */}
             <ThemeToggle />

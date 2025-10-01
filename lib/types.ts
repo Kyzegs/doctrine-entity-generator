@@ -121,3 +121,12 @@ export interface ShareableConfiguration {
   useAttributeMapping: boolean;
   customTraits: CustomTrait[];
 }
+
+export interface Preset {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  options: GenerationOptions;
+}
