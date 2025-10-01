@@ -1,0 +1,22 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ShareableLink {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  data      String   // JSON string containing ShareableCode
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  
+  @@index([expiresAt])
+  @@index([code])
+}

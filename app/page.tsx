@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { createShareUrl, copyToClipboard, ShareableCode } from '@/lib/utils';
 
 const EXAMPLE_SQL = {
   mysql: `CREATE TABLE \`boarding\` (
@@ -389,6 +390,35 @@ export default function Home() {
     setRelationshipSuggestions(prev => prev.filter(s => s.column !== suggestion.column));
   };
 
+  const handleShareCode = async (tabId: string) => {
+    try {
+      const shareData: ShareableCode = {
+        sqlInput: sqlInput,
+        options: options
+      };
+
+      // Always include both XML and PHP if they exist
+      if (xmlOutput) {
+        shareData.xmlOutput = xmlOutput;
+      }
+      if (phpOutput) {
+        shareData.phpOutput = phpOutput;
+      }
+
+      const shareUrl = await createShareUrl(shareData);
+      await copyToClipboard(shareUrl);
+
+      toast.success('Share link copied!', {
+        description: 'Share this link to show your generated code to others.',
+      });
+    } catch (error) {
+      console.error('Failed to create share link:', error);
+      toast.error('Failed to create share link', {
+        description: 'Please try again.',
+      });
+    }
+  };
+
   const generateCode = () => {
     try {
       // Parse the SQL with the selected database dialect
@@ -539,6 +569,7 @@ export default function Home() {
                 ]}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
+                onShare={handleShareCode}
               />
             )}
           </div>
