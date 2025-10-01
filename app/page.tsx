@@ -8,8 +8,9 @@ import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
 import { TabbedCodeOutput } from '@/components/tabbed-code-output';
 import { OptionsForm } from '@/components/options-form';
 import { RelationshipSuggestionsPopup } from '@/components/relationship-suggestions-popup';
-import { PresetManager } from '@/components/preset-manager';
+import { AppSidebar } from '@/components/app-sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -438,88 +439,48 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-4">
-            Doctrine Entity Generator
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Generate Doctrine PHP entities and ORM XML mappings from SQL CREATE TABLE statements
-          </p>
-          
-          {/* Configuration Import/Export */}
-          <div className="flex justify-center items-center space-x-4 mt-6">
-            {/* Export Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="default" className="flex items-center space-x-2">
-                  <Download className="w-4 h-4" />
-                  <span>Export Configuration</span>
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={exportToFile}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Export to File
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToClipboard}>
-                  <Clipboard className="w-4 h-4 mr-2" />
-                  Export to Clipboard
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Import Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" className="flex items-center space-x-2">
-                  <Upload className="w-4 h-4" />
-                  <span>Import Configuration</span>
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => document.getElementById('file-import')?.click()}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Import from File
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={importFromClipboard}>
-                  <Clipboard className="w-4 h-4 mr-2" />
-                  Import from Clipboard
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Preset Manager */}
-            {isHydrated && (
-              <PresetManager
-                currentOptions={options}
-                onLoadPreset={(loadedOptions) => {
-                  setOptions(loadedOptions);
-                  saveOptionsToLocalStorage(loadedOptions);
-                  // Update SQL example if dialect changed
-                  if (loadedOptions.databaseDialect !== options.databaseDialect) {
-                    updateSqlForDialect(loadedOptions.databaseDialect);
-                  }
-                }}
-              />
-            )}
-
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
-            {/* Hidden file input */}
-            <input
-              id="file-import"
-              type="file"
-              accept=".json"
-              onChange={importFromFile}
-              className="hidden"
-            />
+    <>
+      {isHydrated && (
+        <AppSidebar
+          currentOptions={options}
+          onLoadPreset={(loadedOptions) => {
+            setOptions(loadedOptions);
+            saveOptionsToLocalStorage(loadedOptions);
+            // Update SQL example if dialect changed
+            if (loadedOptions.databaseDialect !== options.databaseDialect) {
+              updateSqlForDialect(loadedOptions.databaseDialect);
+            }
+          }}
+          onExportToFile={exportToFile}
+          onExportToClipboard={exportToClipboard}
+          onImportFromFile={() => document.getElementById('file-import')?.click()}
+          onImportFromClipboard={importFromClipboard}
+        />
+      )}
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+          <SidebarTrigger className="-ml-1" />
+          <div className="flex items-center gap-2 flex-1">
+            <h1 className="text-xl font-semibold">Doctrine Entity Generator</h1>
           </div>
-        </div>
+          <ThemeToggle />
+        </header>
+
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          <div className="text-center mb-4">
+            <p className="text-muted-foreground">
+              Generate Doctrine PHP entities and ORM XML mappings from SQL CREATE TABLE statements
+            </p>
+          </div>
+
+          {/* Hidden file input */}
+          <input
+            id="file-import"
+            type="file"
+            accept=".json"
+            onChange={importFromFile}
+            className="hidden"
+          />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
@@ -560,17 +521,6 @@ export default function Home() {
                 }} 
               />
             )}
-
-            <div className="flex gap-4">
-              <Button
-                onClick={generateCode}
-                className="flex-1"
-                size="lg"
-              >
-                Generate Code
-              </Button>
-            </div>
-
           </div>
 
           <div className="space-y-6">
@@ -596,14 +546,68 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* Add padding at bottom to prevent content from being hidden behind fixed footer */}
+        <div className="h-24" />
       </div>
 
-      {/* Relationship Suggestions Popup */}
-      <RelationshipSuggestionsPopup
-        suggestions={relationshipSuggestions}
-        onAddSuggestion={addSuggestedRelationship}
-        onDismiss={() => setRelationshipSuggestions([])}
-      />
-    </div>
+      {/* Fixed Bottom Container */}
+      <div className="fixed bottom-0 right-0 left-0 lg:left-[var(--sidebar-width)] z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="p-4">
+          {/* Relationship Suggestions */}
+          {relationshipSuggestions.length > 0 && (
+            <div className="mb-3 p-3 bg-accent/50 border border-accent-foreground/20 rounded-lg">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    Suggested Relationships
+                    <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                      {relationshipSuggestions.length}
+                    </span>
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {relationshipSuggestions.slice(0, 3).map((suggestion, index) => (
+                      <button
+                        key={`suggestion-${suggestion.field}-${index}`}
+                        onClick={() => addSuggestedRelationship(suggestion)}
+                        className="text-sm px-3 py-1.5 bg-background border border-border rounded-md hover:bg-accent transition-colors"
+                      >
+                        <span className="font-medium">{suggestion.field}</span>
+                        <span className="text-muted-foreground mx-1">→</span>
+                        <span className="text-muted-foreground">{suggestion.targetEntity}</span>
+                      </button>
+                    ))}
+                    {relationshipSuggestions.length > 3 && (
+                      <span className="text-sm text-muted-foreground px-2 py-1.5">
+                        +{relationshipSuggestions.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setRelationshipSuggestions([])}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Generate Code Button */}
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={generateCode}
+              size="lg"
+              className="flex-1 lg:flex-none lg:min-w-[200px]"
+            >
+              Generate Code
+            </Button>
+          </div>
+        </div>
+      </div>
+    </SidebarInset>
+    </>
   );
 }
