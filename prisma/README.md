@@ -16,7 +16,7 @@ The database has one table: `ShareableLink`
 
 Expired links are automatically deleted when:
 1. Someone tries to access an expired link
-2. The cleanup cron job runs (via `/api/cleanup`)
+2. The cleanup cron job runs (via `/api/share/cleanup`)
 
 ## Development
 
@@ -33,4 +33,3 @@ npx prisma studio
 ## Expiration
 
 All shareable links expire **15 minutes** after creation. This is set in the API route when creating new links.
-
