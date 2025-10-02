@@ -18,121 +18,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { createShareUrl, copyToClipboard, ShareableCode } from '@/lib/utils';
-
-const EXAMPLE_SQL = {
-  mysql: `CREATE TABLE \`boarding\` (
-  \`id\` int(11) NOT NULL AUTO_INCREMENT,
-  \`company_id\` int(11) DEFAULT NULL,
-  \`supplier_id\` int(11) DEFAULT NULL,
-  \`status_id\` int(11) DEFAULT NULL,
-  \`pin\` varchar(2) COLLATE utf8_unicode_ci NOT NULL,
-  \`unique_key\` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
-  \`unique_data\` text COLLATE utf8_unicode_ci NOT NULL,
-  \`created\` int(11) NOT NULL,
-  \`created_by\` int(11) NOT NULL,
-  \`send_data\` text COLLATE utf8_unicode_ci NOT NULL,
-  \`send_data_valid\` tinyint(1) NOT NULL,
-  \`sent\` int(11) DEFAULT NULL,
-  \`sent_by\` int(11) DEFAULT NULL,
-  \`receive_data\` text COLLATE utf8_unicode_ci NOT NULL,
-  \`receive_data_valid\` tinyint(1) NOT NULL,
-  \`received\` int(11) DEFAULT NULL,
-  \`received_by\` int(11) DEFAULT NULL,
-  \`deleted\` int(11) DEFAULT NULL,
-  \`deleted_by\` int(11) DEFAULT NULL,
-  PRIMARY KEY (\`id\`),
-  KEY \`IDX_114209DA2ADD6D8C\` (\`supplier_id\`),
-  KEY \`IDX_114209DA6BF700BD\` (\`status_id\`),
-  KEY \`b_idx_company_id\` (\`company_id\`),
-  KEY \`b_idx_status_deleted\` (\`status_id\`,\`deleted\`),
-  CONSTRAINT \`FK_114209DA2ADD6D8C\` FOREIGN KEY (\`supplier_id\`) REFERENCES \`suppliers\` (\`id\`),
-  CONSTRAINT \`FK_114209DA6BF700BD\` FOREIGN KEY (\`status_id\`) REFERENCES \`status\` (\`id\`),
-  CONSTRAINT \`FK_114209DA979B1AD6\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\` (\`id\`)
-) ENGINE=InnoDB AUTO_INCREMENT=182192 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci`,
-
-  postgresql: `CREATE TABLE boarding (
-  id SERIAL PRIMARY KEY,
-  company_id INTEGER REFERENCES companies(id),
-  supplier_id INTEGER REFERENCES suppliers(id),
-  status_id INTEGER REFERENCES status(id),
-  pin VARCHAR(2) NOT NULL,
-  unique_key VARCHAR(40) NOT NULL,
-  unique_data TEXT NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by INTEGER NOT NULL,
-  send_data TEXT NOT NULL,
-  send_data_valid BOOLEAN NOT NULL DEFAULT false,
-  sent TIMESTAMP,
-  sent_by INTEGER,
-  receive_data TEXT NOT NULL,
-  receive_data_valid BOOLEAN NOT NULL DEFAULT false,
-  received TIMESTAMP,
-  received_by INTEGER,
-  deleted TIMESTAMP,
-  deleted_by INTEGER
-)`,
-
-  sqlite: `CREATE TABLE boarding (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  company_id INTEGER,
-  supplier_id INTEGER,
-  status_id INTEGER,
-  pin TEXT NOT NULL,
-  unique_key TEXT NOT NULL,
-  unique_data TEXT NOT NULL,
-  created INTEGER NOT NULL,
-  created_by INTEGER NOT NULL,
-  send_data TEXT NOT NULL,
-  send_data_valid INTEGER NOT NULL,
-  sent INTEGER,
-  sent_by INTEGER,
-  receive_data TEXT NOT NULL,
-  receive_data_valid INTEGER NOT NULL,
-  received INTEGER,
-  received_by INTEGER,
-  deleted INTEGER,
-  deleted_by INTEGER,
-  FOREIGN KEY (company_id) REFERENCES companies(id),
-  FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
-  FOREIGN KEY (status_id) REFERENCES status(id)
-)`,
-
-  mariadb: `CREATE TABLE \`boarding\` (
-  \`id\` int(11) NOT NULL AUTO_INCREMENT,
-  \`company_id\` int(11) DEFAULT NULL,
-  \`supplier_id\` int(11) DEFAULT NULL,
-  \`status_id\` int(11) DEFAULT NULL,
-  \`pin\` varchar(2) COLLATE utf8_unicode_ci NOT NULL,
-  \`unique_key\` varchar(40) COLLATE utf8_unicode_ci NOT NULL,
-  \`unique_data\` text COLLATE utf8_unicode_ci NOT NULL,
-  \`created\` int(11) NOT NULL,
-  \`created_by\` int(11) NOT NULL,
-  \`send_data\` text COLLATE utf8_unicode_ci NOT NULL,
-  \`send_data_valid\` tinyint(1) NOT NULL,
-  \`sent\` int(11) DEFAULT NULL,
-  \`sent_by\` int(11) DEFAULT NULL,
-  \`receive_data\` text COLLATE utf8_unicode_ci NOT NULL,
-  \`receive_data_valid\` tinyint(1) NOT NULL,
-  \`received\` int(11) DEFAULT NULL,
-  \`received_by\` int(11) DEFAULT NULL,
-  \`deleted\` int(11) DEFAULT NULL,
-  \`deleted_by\` int(11) DEFAULT NULL,
-  PRIMARY KEY (\`id\`),
-  KEY \`b_idx_company_id\` (\`company_id\`),
-  CONSTRAINT \`FK_boarding_company\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\` (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci`
-};
-
-const DEFAULT_SQL = EXAMPLE_SQL.mysql;
+import { createShareUrl, copyToClipboard, ShareableCode, toPascalCase, toCamelCase } from '@/lib/utils';
+import { DEFAULT_QUERY, exampleQueries, DatabaseDialect } from '@/lib/example-queries';
 
 const DEFAULT_OPTIONS: GenerationOptions = {
   namespace: '',
   entityPrefix: '',
   entitySuffix: '',
   entityName: '', // Manual override for entity name (not shareable)
-  databaseDialect: 'mysql',
+  databaseDialect: DatabaseDialect.MYSQL,
   
   // ORM mapping settings
   customDataTypes: [
@@ -165,7 +61,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
 };
 
 export default function Home() {
-  const [sqlInput, setSqlInput] = useState(DEFAULT_SQL);
+  const [sqlInput, setSqlInput] = useState(DEFAULT_QUERY);
   const [options, setOptions] = useState<GenerationOptions>(DEFAULT_OPTIONS);
   const [xmlOutput, setXmlOutput] = useState('');
   const [phpOutput, setPhpOutput] = useState('');
@@ -202,8 +98,12 @@ export default function Home() {
     setIsHydrated(true);
   }, []);
 
-  const updateSqlForDialect = (dialect: 'mysql' | 'postgresql' | 'sqlite' | 'mariadb') => {
-    setSqlInput(EXAMPLE_SQL[dialect] || EXAMPLE_SQL.mysql);
+  const updateSqlForDialect = (dialectName: string) => {
+    const example = exampleQueries.find(q => q.name === dialectName);
+    if (example) {
+      setSqlInput(example.query);
+      setOptions(prev => ({ ...prev, databaseDialect: example.dialect }));
+    }
   };
 
   const saveOptionsToLocalStorage = (newOptions: GenerationOptions) => {
@@ -349,11 +249,14 @@ export default function Home() {
       // Extract the actual column name using the utility function
       const columnName = SQLParser.extractColumnName(column.name);
       const baseName = columnName.replace(/_id$/, '');
-      const entityName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+      
+      // Convert snake_case to camelCase for field names and PascalCase for entity names
+      const fieldName = toCamelCase(baseName);
+      const entityName = toPascalCase(baseName);
       
       suggestions.push({
         column: columnName,
-        field: baseName,
+        field: fieldName,
         targetEntity: entityName,
         type: 'many-to-one' as const,
         joinColumn: columnName,
@@ -511,10 +414,24 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <div>
-              <Label htmlFor="sql-input" className="block text-sm font-medium mb-2">
-                SQL CREATE TABLE Statement
-              </Label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="sql-input" className="block text-sm font-medium">
+                  SQL CREATE TABLE Statement
+                </Label>
+                <Select onValueChange={updateSqlForDialect}>
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Load example SQL..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exampleQueries.map((example) => (
+                      <SelectItem key={example.name} value={example.name}>
+                        {example.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Textarea
                 id="sql-input"
                 value={sqlInput}

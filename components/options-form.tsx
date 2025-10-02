@@ -1,6 +1,7 @@
 'use client';
 
 import { GenerationOptions, ColumnFieldMapping, CustomDataType, Relationship, CustomTrait } from '@/lib/types';
+import { DatabaseDialect } from '@/lib/example-queries';
 import { useState, memo, useCallback, ChangeEvent } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -187,10 +188,9 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
                 <SelectValue placeholder="Select database dialect" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mysql">MySQL</SelectItem>
-                <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                <SelectItem value="sqlite">SQLite</SelectItem>
-                <SelectItem value="mariadb">MariaDB</SelectItem>
+                <SelectItem value={DatabaseDialect.MYSQL}>MySQL</SelectItem>
+                <SelectItem value={DatabaseDialect.POSTGRESQL}>PostgreSQL</SelectItem>
+                <SelectItem value={DatabaseDialect.SQLITE}>SQLite</SelectItem>
               </SelectContent>
             </Select>
           </div>

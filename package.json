@@ -7,7 +7,8 @@
     "build": "node scripts/generate-version.js && next build --turbopack",
     "start": "next start",
     "scan": "next dev & npx react-scan@latest localhost:3000",
-    "version": "node scripts/generate-version.js"
+    "version": "node scripts/generate-version.js",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",

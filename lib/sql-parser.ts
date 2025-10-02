@@ -1,12 +1,13 @@
 import { Parser } from 'node-sql-parser';
 import { TableSchema, TableColumn, TableIndex, TableConstraint } from './types';
+import { DatabaseDialect } from './example-queries';
 
 export class SQLParser {
   private static parser = new Parser();
   
-  static parseCreateTable(sql: string, dialect: 'mysql' | 'postgresql' | 'sqlite' | 'mariadb' = 'mysql'): TableSchema {
+  static parseCreateTable(sql: string, dialect: DatabaseDialect = DatabaseDialect.MYSQL): TableSchema {
     try {
-      // Parse the SQL using node-sql-parser with the specified dialect
+      console.log('Dialect:', dialect);
       const parserOptions = {
         database: dialect
       };
@@ -17,10 +18,10 @@ export class SQLParser {
         throw new Error('Invalid SQL statement');
       }
 
-      // Type assertion since we know it's a CREATE TABLE statement
-      const createTable = ast as any;
+      // Handle both single object and array of objects
+      const createTable = Array.isArray(ast) ? ast[0] : ast;
       
-      if (createTable.type !== 'create' || createTable.keyword !== 'table') {
+      if (!createTable || createTable.type !== 'create' || (createTable as any).keyword !== 'table') {
         throw new Error('Not a CREATE TABLE statement');
       }
 

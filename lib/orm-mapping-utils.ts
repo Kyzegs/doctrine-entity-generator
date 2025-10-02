@@ -1,4 +1,5 @@
 import { TableSchema, TableColumn, GenerationOptions } from './types';
+import { toPascalCase, toCamelCase } from './utils';
 
 export interface ORMFieldMapping {
   name: string;
@@ -136,7 +137,7 @@ export class ORMMappingUtils {
     if (customMapping) {
       return customMapping.field;
     }
-    return this.toCamelCase(columnName);
+    return toCamelCase(columnName);
   }
 
   /**
@@ -163,6 +164,8 @@ export class ORMMappingUtils {
           return 'boolean';
         }
         return 'integer';
+      case 'boolean':
+        return 'boolean';
       case 'datetime':
       case 'timestamp':
         return 'datetime';
@@ -225,6 +228,8 @@ export class ORMMappingUtils {
           return 'bool';
         }
         return 'int';
+      case 'boolean':
+        return 'bool';
       case 'datetime':
       case 'timestamp':
         return 'DateTimeImmutable';
@@ -282,18 +287,4 @@ export class ORMMappingUtils {
     );
   }
 
-  /**
-   * Converts snake_case to camelCase
-   */
-  static toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-
-  /**
-   * Converts to PascalCase
-   */
-  static toPascalCase(str: string): string {
-    const camelCase = this.toCamelCase(str);
-    return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
-  }
 }

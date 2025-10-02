@@ -12,6 +12,7 @@ import {
   Clipboard,
   Trash2,
   Code2,
+  Edit,
 } from "lucide-react";
 
 import {
@@ -76,10 +77,14 @@ export function AppSidebar({
   });
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
   const [presetToUpdate, setPresetToUpdate] = React.useState<string | null>(null);
+  const [presetToEdit, setPresetToEdit] = React.useState<string | null>(null);
   const [newPresetName, setNewPresetName] = React.useState('');
   const [newPresetDescription, setNewPresetDescription] = React.useState('');
+  const [editPresetName, setEditPresetName] = React.useState('');
+  const [editPresetDescription, setEditPresetDescription] = React.useState('');
 
   const savePresetsToStorage = (updatedPresets: Preset[]) => {
     localStorage.setItem('entityGeneratorPresets', JSON.stringify(updatedPresets));
@@ -128,6 +133,42 @@ export function AppSidebar({
   const handleUpdatePreset = (presetId: string) => {
     setPresetToUpdate(presetId);
     setIsConfirmDialogOpen(true);
+  };
+
+  const handleEditPreset = (presetId: string) => {
+    const preset = presets.find(p => p.id === presetId);
+    if (preset) {
+      setPresetToEdit(presetId);
+      setEditPresetName(preset.name);
+      setEditPresetDescription(preset.description || '');
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveEditPreset = () => {
+    if (!presetToEdit || !editPresetName.trim()) {
+      toast.error('Please enter a preset name');
+      return;
+    }
+
+    const presetIndex = presets.findIndex(p => p.id === presetToEdit);
+    if (presetIndex === -1) return;
+
+    const updatedPresets = [...presets];
+    updatedPresets[presetIndex] = {
+      ...updatedPresets[presetIndex],
+      name: editPresetName.trim(),
+      description: editPresetDescription.trim() || undefined,
+      updatedAt: new Date().toISOString()
+    };
+
+    savePresetsToStorage(updatedPresets);
+    toast.success(`Preset "${editPresetName}" updated`);
+    
+    setEditPresetName('');
+    setEditPresetDescription('');
+    setPresetToEdit(null);
+    setIsEditDialogOpen(false);
   };
 
   const confirmUpdatePreset = () => {
@@ -229,6 +270,18 @@ export function AppSidebar({
                                         title="Update preset"
                                       >
                                         <Save className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditPreset(preset.id);
+                                        }}
+                                        className="h-6 w-6 opacity-0 group-hover/preset:opacity-100 transition-opacity"
+                                        title="Edit preset"
+                                      >
+                                        <Edit className="h-3 w-3" />
                                       </Button>
                                       <Button
                                         variant="ghost"
@@ -404,6 +457,57 @@ export function AppSidebar({
             </Button>
             <Button onClick={confirmUpdatePreset}>
               Overwrite Preset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Preset Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Preset</DialogTitle>
+            <DialogDescription>
+              Update the name and description of this preset.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-preset-name">Preset Name *</Label>
+              <Input
+                id="edit-preset-name"
+                value={editPresetName}
+                onChange={(e) => setEditPresetName(e.target.value)}
+                placeholder="e.g., MySQL with Attributes"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveEditPreset();
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-preset-description">Description (optional)</Label>
+              <Textarea
+                id="edit-preset-description"
+                value={editPresetDescription}
+                onChange={(e) => setEditPresetDescription(e.target.value)}
+                placeholder="Brief description of this preset..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsEditDialogOpen(false);
+              setPresetToEdit(null);
+              setEditPresetName('');
+              setEditPresetDescription('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEditPreset}>
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,6 @@
 import { TableSchema, TableColumn, GenerationOptions, Relationship } from './types';
 import { ORMMappingUtils, ORMFieldMapping } from './orm-mapping-utils';
+import { toPascalCase } from './utils';
 import { PhpFile, PhpNamespace, ClassType, Method, Property, Parameter, PromotedParameter, PsrPrinter, Literal } from 'js-php-generator';
 
 
@@ -316,7 +317,7 @@ export class PHPEntityGenerator {
       }
       
       if (shouldGenerateSetter) {
-        const setterName = `set${this.toPascalCase(field.name)}`;
+        const setterName = `set${toPascalCase(field.name)}`;
         if (!traitMethods.has(setterName)) {
           const returnType = options.generateFluentSetters ? 'self' : 'void';
           const returnStatement = options.generateFluentSetters ? 'return $this;' : '';
@@ -339,7 +340,7 @@ export class PHPEntityGenerator {
       }
       
       const getterName = this.getGetterNameFromField(relationship.field, { name: relationship.field } as TableColumn);
-      const setterName = `set${this.toPascalCase(relationship.field)}`;
+      const setterName = `set${toPascalCase(relationship.field)}`;
       
       // Determine types and nullability
       let isNullable = false;
@@ -430,7 +431,7 @@ export class PHPEntityGenerator {
             traitMethods.add(getterName);
           }
           if (property.hasSetter === true) {
-            const setterName = `set${this.toPascalCase(property.name)}`;
+            const setterName = `set${toPascalCase(property.name)}`;
             traitMethods.add(setterName);
           }
         });
@@ -525,7 +526,7 @@ export class PHPEntityGenerator {
   }
 
   private static getGetterNameFromField(fieldName: string, column: TableColumn): string {
-    const pascalCaseName = this.toPascalCase(fieldName);
+    const pascalCaseName = toPascalCase(fieldName);
     
     if (fieldName.toLowerCase() === 'id') {
       return 'getId';
@@ -538,9 +539,6 @@ export class PHPEntityGenerator {
     return this.getGetterNameFromField(column.name, column);
   }
 
-  private static toPascalCase(str: string): string {
-    return str.replace(/(?:^|_)(.)/g, (_, char) => char.toUpperCase());
-  }
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
     // Use custom entity name if provided, otherwise convert table name to PascalCase
@@ -549,7 +547,7 @@ export class PHPEntityGenerator {
     }
     
     // Convert table name to PascalCase entity name
-    return ORMMappingUtils.toPascalCase(tableName);
+    return toPascalCase(tableName);
   }
 
   /**

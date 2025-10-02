@@ -1,5 +1,6 @@
 import { TableSchema, TableColumn, GenerationOptions } from './types';
 import { ORMMappingUtils } from './orm-mapping-utils';
+import { toPascalCase } from './utils';
 
 export class DoctrineXMLGenerator {
   static generate(schema: TableSchema, options: GenerationOptions): string {
@@ -161,7 +162,7 @@ export class DoctrineXMLGenerator {
     }
     
     // Convert table name to PascalCase entity name
-    const baseName = ORMMappingUtils.toPascalCase(tableName);
+    const baseName = toPascalCase(tableName);
     return `${options.entityPrefix}${baseName}${options.entitySuffix}`;
   }
 }

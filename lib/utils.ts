@@ -95,3 +95,20 @@ export async function copyToClipboard(text: string): Promise<void> {
   
   await navigator.clipboard.writeText(text);
 }
+
+/**
+ * Converts snake_case to PascalCase
+ * Example: billing_address -> BillingAddress
+ */
+export function toPascalCase(str: string): string {
+  return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+}
+
+/**
+ * Converts snake_case to camelCase
+ * Example: billing_address -> billingAddress
+ */
+export function toCamelCase(str: string): string {
+  const pascalCase = toPascalCase(str);
+  return pascalCase.charAt(0).toLowerCase() + pascalCase.slice(1);
+}

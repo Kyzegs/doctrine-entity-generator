@@ -1,3 +1,5 @@
+import { DatabaseDialect } from './example-queries';
+
 export interface TableColumn {
   name: string;
   type: string;
@@ -87,7 +89,7 @@ export interface GenerationOptions {
   entityPrefix: string;
   entitySuffix: string;
   entityName: string; // Manual override for entity name (not shareable)
-  databaseDialect: 'mysql' | 'postgresql' | 'sqlite' | 'mariadb';
+  databaseDialect: DatabaseDialect;
   
   // ORM mapping settings
   customDataTypes: CustomDataType[];
