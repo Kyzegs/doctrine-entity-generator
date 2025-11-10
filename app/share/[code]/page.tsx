@@ -1,162 +1,126 @@
-'use client';
+import type { Metadata } from 'next';
+import { getSharedDataServer, toPascalCase, ShareableCode } from '@/lib/utils';
+import { SQLParser } from '@/lib/sql-parser';
+import { DatabaseDialect } from '@/lib/example-queries';
+import { SharedCodeClient } from './shared-code-client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { getSharedData, ShareableCode } from '@/lib/utils';
-import { TabbedCodeOutput } from '@/components/tabbed-code-output';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Code2 } from 'lucide-react';
-import { toast } from 'sonner';
+/**
+ * Extract entity name from shared data
+ */
+function extractEntityInfo(sharedData: ShareableCode): { entityName: string; tableName: string; codeTypes: string[] } {
+  let entityName = 'Entity';
+  let tableName = 'table';
+  const codeTypes: string[] = [];
 
-export default function SharedCodePage() {
-  const params = useParams();
-  const router = useRouter();
-  const [sharedData, setSharedData] = useState<ShareableCode | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('');
+  // Try to extract from PHP entity class
+  if (sharedData.phpOutput) {
+    codeTypes.push('PHP Entity');
+    const classMatch = sharedData.phpOutput.match(/class\s+(\w+)/);
+    if (classMatch) {
+      entityName = classMatch[1];
+    }
+  }
 
-  useEffect(() => {
-    const loadSharedData = async () => {
-      try {
-        const code = params.code as string;
-        if (!code) {
-          setError('No share code provided');
-          return;
+  // Try to extract from XML mapping
+  if (sharedData.xmlOutput) {
+    codeTypes.push('XML Mapping');
+    const entityMatch = sharedData.xmlOutput.match(/<entity\s+name="([^"]+)"/);
+    if (entityMatch && entityName === 'Entity') {
+      entityName = entityMatch[1];
+    }
+  }
+
+  // Try to extract table name from SQL
+  if (sharedData.sqlInput) {
+    codeTypes.push('SQL');
+    try {
+      const dialect = sharedData.options?.databaseDialect || DatabaseDialect.MYSQL;
+      const schema = SQLParser.parseCreateTable(sharedData.sqlInput, dialect);
+      tableName = schema.name;
+      if (entityName === 'Entity') {
+        // Use entity name from options or convert table name
+        if (sharedData.options?.entityName) {
+          entityName = sharedData.options.entityName;
+        } else {
+          const prefix = sharedData.options?.entityPrefix || '';
+          const suffix = sharedData.options?.entitySuffix || '';
+          entityName = `${prefix}${toPascalCase(tableName)}${suffix}`;
         }
-
-        const data = await getSharedData(code);
-        setSharedData(data);
-      } catch (err) {
-        console.error('Failed to load shared data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Invalid or corrupted share link';
-        setError(errorMessage);
-        
-        toast.error('Failed to load shared code', {
-          description: errorMessage === 'Link has expired' 
-            ? 'This share link has expired (15 minutes limit).' 
-            : 'The share link appears to be invalid or corrupted.',
-        });
-      } finally {
-        setLoading(false);
       }
-    };
-
-    loadSharedData();
-  }, [params.code]);
-
-  const handleBackToGenerator = () => {
-    router.push('/');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading shared code...</p>
-        </div>
-      </div>
-    );
+    } catch (e) {
+      // If SQL parsing fails, try simple regex
+      const tableMatch = sharedData.sqlInput.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`?(\w+)`?|(\w+))/i);
+      if (tableMatch) {
+        tableName = tableMatch[1] || tableMatch[2] || 'table';
+      }
+    }
   }
 
-  if (error || !sharedData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center max-w-md p-6">
-          <div className="bg-destructive/10 text-destructive rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <Code2 className="h-8 w-8" />
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Unable to Load Shared Code</h1>
-          <p className="text-muted-foreground mb-6">
-            {error || 'The share link appears to be invalid or corrupted.'}
-          </p>
-          <Button onClick={handleBackToGenerator} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Go to Generator
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const tabs = [
-    ...(sharedData.xmlOutput ? [{
-      id: 'xml',
-      title: 'Doctrine XML Mapping',
-      code: sharedData.xmlOutput,
-      language: 'xml'
-    }] : []),
-    ...(sharedData.phpOutput ? [{
-      id: 'php',
-      title: 'PHP Entity Class',
-      code: sharedData.phpOutput,
-      language: 'php'
-    }] : []),
-    ...(sharedData.sqlInput ? [{
-      id: 'sql',
-      title: 'Original SQL',
-      code: sharedData.sqlInput,
-      language: 'sql'
-    }] : [])
-  ];
-
-  return (
-    <div className="w-full min-h-screen bg-background">
-      <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4 w-full">
-        <Button
-          onClick={handleBackToGenerator}
-          variant="ghost"
-          size="sm"
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Generator
-        </Button>
-        <div className="flex items-center gap-2 flex-1">
-          <Code2 className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Shared Doctrine Code</h1>
-        </div>
-        <ThemeToggle />
-      </header>
-
-      <main className="w-full p-4">
-        <div className="mb-4">
-          <div className="bg-card border border-border rounded-lg p-4">
-            <h2 className="font-medium text-sm text-muted-foreground mb-2">Shared Information</h2>
-            <div className="text-sm space-y-1">
-              {sharedData.timestamp && (
-                <p className="text-muted-foreground">
-                  Shared on: {new Date(sharedData.timestamp).toLocaleString()}
-                </p>
-              )}
-              <p className="text-muted-foreground">
-                Contains: {[
-                  sharedData.xmlOutput && 'XML Mapping',
-                  sharedData.phpOutput && 'PHP Entity',
-                  sharedData.sqlInput && 'Original SQL'
-                ].filter(Boolean).join(', ')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {tabs.length > 0 ? (
-          <TabbedCodeOutput 
-            tabs={tabs} 
-            hideShareButton={true}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-        ) : (
-          <div className="text-center p-12 bg-card border border-border rounded-lg">
-            <Code2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No code available in this share link</p>
-          </div>
-        )}
-      </main>
-    </div>
-  );
+  return { entityName, tableName, codeTypes };
 }
 
+/**
+ * Generate metadata for shared code pages
+ */
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const { code } = await params;
+  const sharedData = await getSharedDataServer(code);
+
+  if (!sharedData) {
+    return {
+      title: 'Shared Code Not Found',
+      description: 'The shared Doctrine entity code could not be found or has expired.',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const { entityName, tableName, codeTypes } = extractEntityInfo(sharedData);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://entity-generator.vercel.app';
+  const shareUrl = `${siteUrl}/share/${code}`;
+
+  const description = `View shared Doctrine entity code for ${entityName}${tableName !== 'table' ? ` (table: ${tableName})` : ''}. Includes: ${codeTypes.join(', ')}.`;
+
+  return {
+    title: `Shared: ${entityName}`,
+    description,
+    keywords: [
+      'doctrine',
+      'doctrine orm',
+      'php entity',
+      'shared code',
+      entityName,
+      tableName,
+      ...codeTypes,
+    ],
+    authors: [{ name: 'Sebastiaan "Kyzegs" Zegers' }],
+    creator: 'Sebastiaan "Kyzegs" Zegers',
+    openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: shareUrl,
+      title: `Shared Doctrine Entity: ${entityName}`,
+      description,
+      siteName: 'Doctrine Entity Generator',
+    },
+    twitter: {
+      card: 'summary',
+      title: `Shared Doctrine Entity: ${entityName}`,
+      description,
+      creator: '@doctrine',
+    },
+    alternates: {
+      canonical: shareUrl,
+    },
+    robots: {
+      index: false, // Don't index shared links as they expire
+      follow: false,
+    },
+  };
+}
+
+export default function SharedCodePage() {
+  return <SharedCodeClient />;
+}

@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { GenerationOptions } from './types';
+import { prisma } from './prisma';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -61,7 +62,36 @@ export async function createShareUrl(data: ShareableCode): Promise<string> {
 }
 
 /**
- * Retrieves shared data from the database
+ * Retrieves shared data from the database (server-side)
+ */
+export async function getSharedDataServer(code: string): Promise<ShareableCode | null> {
+  try {
+    const shareableLink = await prisma.shareableLink.findUnique({
+      where: { code },
+    });
+    
+    if (!shareableLink) {
+      return null;
+    }
+    
+    // Check if the link has expired
+    if (new Date() > shareableLink.expiresAt) {
+      // Delete expired link
+      await prisma.shareableLink.delete({
+        where: { code },
+      });
+      return null;
+    }
+    
+    return JSON.parse(shareableLink.data) as ShareableCode;
+  } catch (error) {
+    console.error('Failed to retrieve shared data:', error);
+    return null;
+  }
+}
+
+/**
+ * Retrieves shared data from the database (client-side)
  */
 export async function getSharedData(code: string): Promise<ShareableCode> {
   try {
