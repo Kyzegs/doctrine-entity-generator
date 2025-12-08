@@ -2,6 +2,7 @@ import { TableSchema, TableColumn, GenerationOptions } from './types';
 import { ORMMappingUtils } from './orm-mapping-utils';
 import { toPascalCase } from './utils';
 import { DatabaseDialect } from './example-queries';
+import { create } from 'xmlbuilder2';
 
 export class DoctrineXMLGenerator {
   static generate(schema: TableSchema, options: GenerationOptions): string {
@@ -11,61 +12,41 @@ export class DoctrineXMLGenerator {
     // Create ORM mapping for field generation
     const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
     
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<doctrine-mapping
-        xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
-                        http://doctrine-project.org/schemas/orm/doctrine-mapping.xsd"
->
-    <entity
-            name="${entityClass}"
-            table="${schema.name}"
-    >`;
+    // Create XML document
+    const doc = create({ version: '1.0', encoding: 'UTF-8' });
+    
+    // Define namespaces
+    const doctrineNs = 'http://doctrine-project.org/schemas/orm/doctrine-mapping';
+    const xsiNs = 'http://www.w3.org/2001/XMLSchema-instance';
+    
+    // Create root element with namespaces
+    const root = doc.ele(doctrineNs, 'doctrine-mapping')
+      .att(xsiNs, 'xsi:schemaLocation', 
+        'http://doctrine-project.org/schemas/orm/doctrine-mapping\n                        http://doctrine-project.org/schemas/orm/doctrine-mapping.xsd');
+    
+    // Create entity element
+    const entity = root.ele(doctrineNs, 'entity')
+      .att('name', entityClass)
+      .att('table', schema.name);
 
     // Generate ID field
     const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
     if (idColumn) {
-      const hasUnsigned = idColumn.unsigned && options.databaseDialect === DatabaseDialect.MYSQL;
-      const hasDefault = idColumn.default && idColumn.default !== 'NULL';
-      const needsOptions = hasUnsigned || hasDefault;
+      const idElement = entity.ele(doctrineNs, 'id')
+        .att('name', 'id')
+        .att('type', 'integer')
+        .att('length', '10');
       
-      xml += `
-        <id name="id" type="integer" length="10"`;
+      // Add options if needed
+      const hasUnsigned = !!(idColumn.unsigned && options.databaseDialect === DatabaseDialect.MYSQL);
+      this.addOptionsElement(idElement, hasUnsigned, idColumn.default, doctrineNs);
       
-      if (needsOptions) {
-        xml += `>`;
-        xml += `
-            <options>`;
-        
-        // Add default value if present
-        if (hasDefault) {
-          xml += `
-                <option name="default">${this.escapeXmlValue(idColumn.default)}</option>`;
-        }
-        
-        // Add unsigned option for MySQL if applicable
-        if (hasUnsigned) {
-          xml += `
-                <option name="unsigned">true</option>`;
-        }
-        
-        xml += `
-            </options>`;
-        xml += `
-            <generator/>`;
-        xml += `
-        </id>`;
-      } else {
-        xml += `>
-            <generator/>
-        </id>`;
-      }
+      idElement.ele(doctrineNs, 'generator');
     }
 
     // Generate all fields based on the ORM mapping
     for (const field of ormMapping.fields) {
-      xml += this.generateFieldXMLFromMapping(field, options);
+      this.generateFieldXMLFromMapping(entity, field, options, doctrineNs);
     }
     
     // Generate relationships
@@ -74,157 +55,141 @@ export class DoctrineXMLGenerator {
         ? `${relationship.targetEntityNamespace}\\${relationship.targetEntity}`
         : `${options.namespace}\\${relationship.targetEntity}`;
       
-      let relationshipXml = `
-        <${relationship.type} field="${relationship.field}" target-entity="${targetEntity}"`;
+      const relationshipElement = entity.ele(doctrineNs, relationship.type)
+        .att('field', relationship.field)
+        .att('target-entity', targetEntity);
       
       if (relationship.fetch && relationship.fetch !== 'LAZY') {
-        relationshipXml += ` fetch="${relationship.fetch}"`;
+        relationshipElement.att('fetch', relationship.fetch);
       }
       
       if (relationship.mappedBy) {
-        relationshipXml += ` mapped-by="${relationship.mappedBy}"`;
+        relationshipElement.att('mapped-by', relationship.mappedBy);
       }
       
       if (relationship.inversedBy) {
-        relationshipXml += ` inversed-by="${relationship.inversedBy}"`;
+        relationshipElement.att('inversed-by', relationship.inversedBy);
       }
       
       if (relationship.orphanRemoval) {
-        relationshipXml += ` orphan-removal="true"`;
+        relationshipElement.att('orphan-removal', 'true');
       }
-      
-      relationshipXml += `>`;
       
       // Add join-column for many-to-one and one-to-one relationships
       if (relationship.joinColumn && (relationship.type === 'many-to-one' || relationship.type === 'one-to-one')) {
-        // Check if the corresponding SQL column is nullable
         const correspondingColumn = schema.columns.find(col => col.name === relationship.joinColumn);
         const isNullable = correspondingColumn && correspondingColumn.nullable;
         
-        relationshipXml += `
-            <join-column name="${relationship.joinColumn}"${isNullable ? ' nullable="true"' : ' nullable="false"'}/>`;
+        relationshipElement.ele(doctrineNs, 'join-column')
+          .att('name', relationship.joinColumn)
+          .att('nullable', isNullable ? 'true' : 'false');
       }
       
       // Add cascade operations
       if (relationship.cascade && relationship.cascade.length > 0) {
-        relationshipXml += `
-            <cascade>`;
+        const cascadeElement = relationshipElement.ele(doctrineNs, 'cascade');
         for (const cascadeType of relationship.cascade) {
-          relationshipXml += `
-                <cascade-${cascadeType}/>`;
+          cascadeElement.ele(doctrineNs, `cascade-${cascadeType}`);
         }
-        relationshipXml += `
-            </cascade>`;
       }
-      
-      relationshipXml += `
-        </${relationship.type}>`;
-      
-      xml += relationshipXml;
     }
 
     // Generate indexes
     const nonPrimaryIndexes = schema.indexes.filter(idx => !idx.primary);
     if (nonPrimaryIndexes.length > 0) {
-      xml += `
-
-        <indexes>`;
+      const indexesElement = entity.ele(doctrineNs, 'indexes');
       for (const index of nonPrimaryIndexes) {
-        xml += `
-            <index name="${index.name}" columns="${index.columns.join(',')}"/>`;
+        indexesElement.ele(doctrineNs, 'index')
+          .att('name', index.name)
+          .att('columns', index.columns.join(','));
       }
-      xml += `
-        </indexes>`;
     }
 
-    // Relationships are now handled in the main field loop above
-    // This ensures they appear in the same order as the CREATE TABLE statement
-
-    xml += `
-    </entity>
-</doctrine-mapping>`;
-
-    return xml;
+    // Serialize with pretty printing
+    // Use custom formatting to match Doctrine XML style
+    return doc.end({ 
+      format: 'xml',
+      prettyPrint: true,
+      indent: '    ',
+      newline: '\n'
+    } as any);
   }
 
-  private static generateFieldXMLFromMapping(field: any, options: GenerationOptions): string {
-    let xml = `
-        <field name="${field.name}"`;
+  private static generateFieldXMLFromMapping(
+    parent: any, 
+    field: any, 
+    options: GenerationOptions,
+    doctrineNs: string
+  ): void {
+    const fieldElement = parent.ele(doctrineNs, 'field')
+      .att('name', field.name);
     
     // Only include column attribute if explicitly requested or if there's a custom mapping with a column specified
     const customMapping = options.columnFieldMappings.find(mapping => mapping.field === field.name);
     const shouldIncludeColumn = options.explicitlyDefineColumns || (customMapping && customMapping.column);
     
     if (shouldIncludeColumn) {
-      // Use the custom mapping column if it exists, otherwise use the field's column name
       const columnName = customMapping?.column || field.columnName;
-      xml += ` column="${columnName}"`;
+      fieldElement.att('column', columnName);
     }
     
     if (field.doctrineType !== 'string') {
-      xml += ` type="${field.doctrineType}"`;
+      fieldElement.att('type', field.doctrineType);
     }
     
     if (field.length) {
-      xml += ` length="${field.length}"`;
+      fieldElement.att('length', String(field.length));
     }
     
     if (field.nullable) {
-      xml += ` nullable="true"`;
+      fieldElement.att('nullable', 'true');
     }
     
     // Add enum class if specified
     if (field.enumClass) {
-      xml += ` enum-type="${field.enumClass}"`;
+      fieldElement.att('enum-type', field.enumClass);
     }
     
     // Check if we need to add options (unsigned or default)
     const integerTypes = ['integer', 'smallint', 'bigint'];
-    const hasUnsigned = field.unsigned && options.databaseDialect === DatabaseDialect.MYSQL && integerTypes.includes(field.doctrineType);
-    const hasDefault = field.default && field.default !== 'NULL';
+    const hasUnsignedForField = !!(field.unsigned && options.databaseDialect === DatabaseDialect.MYSQL && integerTypes.includes(field.doctrineType));
+    this.addOptionsElement(fieldElement, hasUnsignedForField, field.default, doctrineNs);
+  }
+
+  /**
+   * Adds options element to a field or ID element if unsigned or default values are needed
+   * @param parentElement The parent XML element (field or id)
+   * @param hasUnsigned Whether the unsigned option should be added (already validated for MySQL and type)
+   * @param defaultValue The default value from the column
+   * @param doctrineNs Doctrine namespace URI
+   */
+  private static addOptionsElement(
+    parentElement: any,
+    hasUnsigned: boolean,
+    defaultValue: string | undefined,
+    doctrineNs: string
+  ): void {
+    const hasDefault = defaultValue && defaultValue !== 'NULL';
     const needsOptions = hasUnsigned || hasDefault;
     
     if (needsOptions) {
-      xml += `>`;
-      xml += `
-            <options>`;
+      const optionsElement = parentElement.ele(doctrineNs, 'options');
       
       // Add default value if present
       if (hasDefault) {
-        xml += `
-                <option name="default">${this.escapeXmlValue(field.default)}</option>`;
+        optionsElement.ele(doctrineNs, 'option')
+          .att('name', 'default')
+          .txt(defaultValue);
       }
       
       // Add unsigned option for MySQL if applicable
       if (hasUnsigned) {
-        xml += `
-                <option name="unsigned">true</option>`;
+        optionsElement.ele(doctrineNs, 'option')
+          .att('name', 'unsigned')
+          .txt('true');
       }
-      
-      xml += `
-            </options>`;
-      xml += `
-        </field>`;
-    } else {
-      xml += `/>`;
     }
-    
-    return xml;
   }
-
-  private static escapeXmlValue(value: string): string {
-    // Escape XML special characters
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-  }
-
-
-
-
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
     // Use custom entity name if provided, otherwise convert table name to PascalCase
