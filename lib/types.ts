@@ -8,6 +8,7 @@ export interface TableColumn {
   autoIncrement: boolean;
   default?: string;
   collation?: string;
+  unsigned?: boolean; // For MySQL: INT UNSIGNED, BIGINT UNSIGNED, etc.
 }
 
 export interface TableIndex {

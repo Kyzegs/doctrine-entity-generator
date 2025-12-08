@@ -1,6 +1,7 @@
 import { TableSchema, TableColumn, GenerationOptions } from './types';
 import { ORMMappingUtils } from './orm-mapping-utils';
 import { toPascalCase } from './utils';
+import { DatabaseDialect } from './example-queries';
 
 export class DoctrineXMLGenerator {
   static generate(schema: TableSchema, options: GenerationOptions): string {
@@ -25,10 +26,41 @@ export class DoctrineXMLGenerator {
     // Generate ID field
     const idColumn = schema.columns.find(col => col.name === 'id' || col.autoIncrement);
     if (idColumn) {
+      const hasUnsigned = idColumn.unsigned && options.databaseDialect === DatabaseDialect.MYSQL;
+      const hasDefault = idColumn.default && idColumn.default !== 'NULL';
+      const needsOptions = hasUnsigned || hasDefault;
+      
       xml += `
-        <id name="id" type="integer" length="10">
+        <id name="id" type="integer" length="10"`;
+      
+      if (needsOptions) {
+        xml += `>`;
+        xml += `
+            <options>`;
+        
+        // Add default value if present
+        if (hasDefault) {
+          xml += `
+                <option name="default">${this.escapeXmlValue(idColumn.default)}</option>`;
+        }
+        
+        // Add unsigned option for MySQL if applicable
+        if (hasUnsigned) {
+          xml += `
+                <option name="unsigned">true</option>`;
+        }
+        
+        xml += `
+            </options>`;
+        xml += `
+            <generator/>`;
+        xml += `
+        </id>`;
+      } else {
+        xml += `>
             <generator/>
         </id>`;
+      }
     }
 
     // Generate all fields based on the ORM mapping
@@ -146,9 +178,48 @@ export class DoctrineXMLGenerator {
       xml += ` enum-type="${field.enumClass}"`;
     }
     
-    xml += `/>`;
+    // Check if we need to add options (unsigned or default)
+    const integerTypes = ['integer', 'smallint', 'bigint'];
+    const hasUnsigned = field.unsigned && options.databaseDialect === DatabaseDialect.MYSQL && integerTypes.includes(field.doctrineType);
+    const hasDefault = field.default && field.default !== 'NULL';
+    const needsOptions = hasUnsigned || hasDefault;
+    
+    if (needsOptions) {
+      xml += `>`;
+      xml += `
+            <options>`;
+      
+      // Add default value if present
+      if (hasDefault) {
+        xml += `
+                <option name="default">${this.escapeXmlValue(field.default)}</option>`;
+      }
+      
+      // Add unsigned option for MySQL if applicable
+      if (hasUnsigned) {
+        xml += `
+                <option name="unsigned">true</option>`;
+      }
+      
+      xml += `
+            </options>`;
+      xml += `
+        </field>`;
+    } else {
+      xml += `/>`;
+    }
     
     return xml;
+  }
+
+  private static escapeXmlValue(value: string): string {
+    // Escape XML special characters
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
   }
 
 

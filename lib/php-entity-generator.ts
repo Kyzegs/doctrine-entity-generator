@@ -1,6 +1,7 @@
 import { TableSchema, TableColumn, GenerationOptions, Relationship } from './types';
 import { ORMMappingUtils, ORMFieldMapping } from './orm-mapping-utils';
 import { toPascalCase } from './utils';
+import { DatabaseDialect } from './example-queries';
 import { PhpFile, PhpNamespace, ClassType, Method, Property, Parameter, PromotedParameter, PsrPrinter, Literal } from 'js-php-generator';
 
 
@@ -127,7 +128,12 @@ export class PHPEntityGenerator {
       // Add Doctrine attributes for ID if using attribute mapping
       if (options.useAttributeMapping) {
         property.addAttribute('ORM\\Id');
-        property.addAttribute('ORM\\Column', [new Literal("type: 'integer'")]);
+        const idColumnArgs: any = { type: 'integer' };
+        // Add unsigned option for MySQL if applicable
+        if (idColumn.unsigned && options.databaseDialect === DatabaseDialect.MYSQL) {
+          idColumnArgs.options = { unsigned: true };
+        }
+        property.addAttribute('ORM\\Column', [new Literal(this.createNamedParams(idColumnArgs))]);
         if (idColumn.autoIncrement) {
           property.addAttribute('ORM\\GeneratedValue');
         }
@@ -563,6 +569,16 @@ export class PHPEntityGenerator {
         valueStr = value ? 'true' : 'false';
       } else if (Array.isArray(value)) {
         valueStr = '[' + value.map(v => typeof v === 'string' ? `'${v}'` : v).join(', ') + ']';
+      } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Handle objects (like options: { unsigned: true })
+        const objParts: string[] = [];
+        for (const [objKey, objValue] of Object.entries(value)) {
+          const objValueStr = typeof objValue === 'boolean' 
+            ? (objValue ? 'true' : 'false')
+            : (typeof objValue === 'string' ? `'${objValue}'` : String(objValue));
+          objParts.push(`'${objKey}' => ${objValueStr}`);
+        }
+        valueStr = '[' + objParts.join(', ') + ']';
       } else {
         valueStr = String(value);
       }
@@ -603,7 +619,16 @@ export class PHPEntityGenerator {
     if (field.enumClass) {
       attributeArgs.enumType = field.enumClass;
     }
-    
+
+    // Add unsigned option for MySQL if applicable
+    // Only applies to integer types (smallint, integer, bigint)
+    if (field.unsigned && options.databaseDialect === DatabaseDialect.MYSQL) {
+      const integerTypes = ['integer', 'smallint', 'bigint'];
+      if (integerTypes.includes(field.doctrineType)) {
+        attributeArgs.options = { unsigned: true };
+      }
+    }
+
     // Only add the attribute if there are arguments
     if (Object.keys(attributeArgs).length > 0) {
       element.addAttribute('ORM\\Column', [new Literal(this.createNamedParams(attributeArgs))]);

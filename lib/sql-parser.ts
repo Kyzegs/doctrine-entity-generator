@@ -118,6 +118,8 @@ export class SQLParser {
     // Parse column attributes
     const nullable = !this.hasAttribute(def, 'not null');
     const autoIncrement = this.hasAttribute(def, 'auto_increment');
+    // Check for unsigned in typeInfo first, then fall back to hasAttribute
+    const unsigned = typeInfo.unsigned || this.hasAttribute(def, 'unsigned');
     const defaultValue = this.extractDefaultValue(def);
     const collation = this.extractCollation(def);
 
@@ -127,14 +129,15 @@ export class SQLParser {
       length: typeInfo.length,
       nullable,
       autoIncrement,
+      unsigned,
       default: defaultValue,
       collation
     };
   }
 
-  private static parseDataType(dataType: any): { type: string; length?: number } {
+  private static parseDataType(dataType: any): { type: string; length?: number; unsigned?: boolean } {
     if (!dataType || !dataType.dataType) {
-      return { type: 'unknown', length: undefined };
+      return { type: 'unknown', length: undefined, unsigned: undefined };
     }
     
     const type = dataType.dataType.toLowerCase();
@@ -145,7 +148,10 @@ export class SQLParser {
       length = parseInt(dataType.length);
     }
 
-    return { type, length };
+    // Check for unsigned in suffix array
+    const unsigned = Array.isArray(dataType.suffix) && dataType.suffix.includes('UNSIGNED');
+
+    return { type, length, unsigned };
   }
 
   private static hasAttribute(def: any, attribute: string): boolean {
@@ -155,6 +161,13 @@ export class SQLParser {
     
     if (attribute === 'auto_increment') {
       return def.auto_increment === 'auto_increment';
+    }
+    
+    if (attribute === 'unsigned') {
+      // Check if unsigned is in the definition.suffix array
+      if (def.definition && Array.isArray(def.definition.suffix)) {
+        return def.definition.suffix.includes('UNSIGNED');
+      }
     }
     
     return false;

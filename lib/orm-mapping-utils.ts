@@ -14,6 +14,8 @@ export interface ORMFieldMapping {
   isByField: boolean;
   isRelationship: boolean;
   relationship?: any; // Store the full relationship object for relationship fields
+  unsigned?: boolean; // For MySQL: INT UNSIGNED, BIGINT UNSIGNED, etc.
+  default?: string; // Default value from the column
 }
 
 export class ORMMappingUtils {
@@ -107,7 +109,9 @@ export class ORMMappingUtils {
         enumClass: customMapping?.enumClass,
         isTimestamp,
         isByField,
-        isRelationship: false
+        isRelationship: false,
+        unsigned: column.unsigned,
+        default: column.default
       });
     }
     
