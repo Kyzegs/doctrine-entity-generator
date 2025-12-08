@@ -541,9 +541,6 @@ export class PHPEntityGenerator {
     return `get${pascalCaseName}`;
   }
 
-  private static getGetterName(column: TableColumn): string {
-    return this.getGetterNameFromField(column.name, column);
-  }
 
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {
