@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SQLParser } from '@/lib/sql-parser';
 import { DoctrineXMLGenerator } from '@/lib/doctrine-xml-generator';
 import { PHPEntityGenerator } from '@/lib/php-entity-generator';
@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/popover";
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CodeMirror from '@uiw/react-codemirror';
+import { sql, MySQL, PostgreSQL, SQLite } from '@codemirror/lang-sql';
+import { tomorrowNight } from '@/lib/codemirror-theme-tomorrow-night';
 import { toast } from 'sonner';
 import { createShareUrl, copyToClipboard, ShareableCode, toPascalCase, toCamelCase } from '@/lib/utils';
 import { DEFAULT_QUERY, exampleQueries, DatabaseDialect } from '@/lib/example-queries';
@@ -60,6 +62,12 @@ const DEFAULT_OPTIONS: GenerationOptions = {
   selectedTraits: []
 };
 
+const CODEMIRROR_SQL_DIALECTS = {
+  [DatabaseDialect.MYSQL]: MySQL,
+  [DatabaseDialect.POSTGRESQL]: PostgreSQL,
+  [DatabaseDialect.SQLITE]: SQLite,
+} as const;
+
 export default function Home() {
   const [sqlInput, setSqlInput] = useState(DEFAULT_QUERY);
   const [options, setOptions] = useState<GenerationOptions>(DEFAULT_OPTIONS);
@@ -68,6 +76,11 @@ export default function Home() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [relationshipSuggestions, setRelationshipSuggestions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>('xml');
+
+  const sqlEditorExtensions = useMemo(() => {
+    const dialect = CODEMIRROR_SQL_DIALECTS[options.databaseDialect] ?? MySQL;
+    return [sql({ dialect })];
+  }, [options.databaseDialect]);
 
   // Load from localStorage after hydration
   useEffect(() => {
@@ -432,13 +445,18 @@ export default function Home() {
                   </SelectContent>
                 </Select>
               </div>
-              <Textarea
-                id="sql-input"
-                value={sqlInput}
-                onChange={(e) => setSqlInput(e.target.value)}
-                className="w-full h-64 font-mono text-sm"
-                placeholder="Paste your CREATE TABLE statement here..."
-              />
+              <div id="sql-input" className="flex w-full min-h-64 resize-y flex-col rounded-md border border-input overflow-hidden [&>div]:min-h-0 [&>div]:flex-1 [&_.cm-editor]:outline-none [&_.cm-editor]:h-full [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto [&_.cm-scroller]:font-mono [&_.cm-scroller]:text-sm [&_.cm-scroller]:min-h-0" style={{ height: '16rem' }}>
+                <CodeMirror
+                  value={sqlInput}
+                  onChange={setSqlInput}
+                  height="100%"
+                  minHeight="16rem"
+                  theme={tomorrowNight}
+                  extensions={sqlEditorExtensions}
+                  placeholder="Paste your CREATE TABLE statement here..."
+                  basicSetup={{ lineNumbers: true, foldGutter: false }}
+                />
+              </div>
             </div>
 
             {!isHydrated ? (
