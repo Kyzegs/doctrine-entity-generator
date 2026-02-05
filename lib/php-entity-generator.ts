@@ -4,6 +4,8 @@ import { toPascalCase } from './utils';
 import { DatabaseDialect } from './example-queries';
 import { PhpFile, PhpNamespace, ClassType, PsrPrinter, Literal } from 'js-php-generator';
 
+type OrderedMember = { type: 'field'; field: ORMFieldMapping } | { type: 'relationship'; relationship: Relationship };
+
 export class PHPEntityGenerator {
   static generate(schema: TableSchema, options: GenerationOptions): string {
     const entityName = this.getEntityName(schema.name, options);
@@ -123,11 +125,9 @@ export class PHPEntityGenerator {
       this.setVisibilityOnElement(property, visibility);
       property.setType(idColumn.nullable ? `?${phpType}` : phpType);
 
-      // Add Doctrine attributes for ID if using attribute mapping
       if (options.useAttributeMapping) {
         property.addAttribute('ORM\\Id');
         const idColumnArgs: any = { type: 'integer' };
-        // Add unsigned option for MySQL if applicable
         if (idColumn.unsigned && options.databaseDialect === DatabaseDialect.MYSQL) {
           idColumnArgs.options = { unsigned: true };
         }
@@ -142,65 +142,55 @@ export class PHPEntityGenerator {
       }
     }
 
-    // Generate properties for optional fields
-    for (const field of ormMapping.fields) {
-      if (traitProperties.has(field.name) || !field.nullable) {
-        continue;
-      }
+    // Generate properties in schema column order; only optional fields and optional relationships get a property
+    // (required relationships are constructor-promoted only, no separate property)
+    const orderedMembers = this.getOrderedMembers(schema, ormMapping, options);
+    for (const member of orderedMembers) {
+      if (member.type === 'field') {
+        const field = member.field;
+        if (traitProperties.has(field.name) || !field.nullable) {
+          continue;
+        }
+        const property = class_.addProperty(field.name);
+        this.setVisibilityOnElement(property, visibility);
+        property.setType(field.nullable ? `?${field.phpType}` : field.phpType);
+        if (options.useAttributeMapping) {
+          this.addColumnAttribute(property, field, options);
+        }
+        if (field.nullable) {
+          property.setValue(null);
+        }
+      } else {
+        const relationship = member.relationship;
+        if (traitProperties.has(relationship.field)) continue;
+        // Required relationships are only in constructor (promoted); do not add a duplicate property
+        if (this.isRelationshipRequired(relationship, schema)) continue;
 
-      const property = class_.addProperty(field.name);
-      this.setVisibilityOnElement(property, visibility);
-      property.setType(field.nullable ? `?${field.phpType}` : field.phpType);
-
-      // Add Doctrine Column attribute if using attribute mapping
-      if (options.useAttributeMapping) {
-        this.addColumnAttribute(property, field, options);
-      }
-
-      if (field.nullable) {
-        property.setValue(null);
-      }
-    }
-
-    // Generate relationship properties
-    for (const relationship of ormMapping.relationships) {
-      if (traitProperties.has(relationship.field)) {
-        continue;
-      }
-
-      let isNullable = false;
-
-      // Determine if the relationship should be nullable
-      if (relationship.joinColumn) {
-        const correspondingColumn = schema.columns.find((col) => col.name === relationship.joinColumn);
-        if (correspondingColumn && correspondingColumn.nullable) {
+        let isNullable = false;
+        if (relationship.joinColumn) {
+          const correspondingColumn = schema.columns.find((col) => col.name === relationship.joinColumn);
+          if (correspondingColumn && correspondingColumn.nullable) isNullable = true;
+        }
+        if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
           isNullable = true;
         }
-      }
 
-      // For collection types, they're always nullable
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        isNullable = true;
-      }
+        let propertyType: string;
+        if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+          propertyType = isNullable ? '?Collection' : 'Collection';
+        } else {
+          propertyType = isNullable ? `?${relationship.targetEntity}` : relationship.targetEntity;
+        }
 
-      let propertyType: string;
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        propertyType = isNullable ? '?Collection' : 'Collection';
-      } else {
-        propertyType = isNullable ? `?${relationship.targetEntity}` : relationship.targetEntity;
-      }
-
-      const property = class_.addProperty(relationship.field);
-      this.setVisibilityOnElement(property, visibility);
-      property.setType(propertyType);
-
-      // Add Doctrine relationship attributes if using attribute mapping
-      if (options.useAttributeMapping) {
-        this.addRelationshipAttribute(property, relationship, schema);
-      }
-
-      if (isNullable) {
-        property.setValue(null);
+        const property = class_.addProperty(relationship.field);
+        this.setVisibilityOnElement(property, visibility);
+        property.setType(propertyType);
+        if (options.useAttributeMapping) {
+          this.addRelationshipAttribute(property, relationship, schema);
+        }
+        if (isNullable) {
+          property.setValue(null);
+        }
       }
     }
   }
@@ -213,7 +203,7 @@ export class PHPEntityGenerator {
   ): void {
     const constructorData = this.getConstructorColumns(schema, options, traitProperties);
 
-    if (constructorData.columns.length === 0 && constructorData.relationships.length === 0) {
+    if (constructorData.ordered.length === 0) {
       return;
     }
 
@@ -221,52 +211,46 @@ export class PHPEntityGenerator {
     const visibility = options.publicProperties ? 'public' : 'private';
     const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
 
-    // Add required field parameters with property promotion using addPromotedParameter method
-    for (const column of constructorData.columns) {
-      const fieldName = ORMMappingUtils.getFieldName(column.name, options);
-      const phpType = ORMMappingUtils.mapToPHPType(column, options);
+    for (const item of constructorData.ordered) {
+      if (item.type === 'column') {
+        const column = item.column;
+        const fieldName = ORMMappingUtils.getFieldName(column.name, options);
+        const phpType = ORMMappingUtils.mapToPHPType(column, options);
 
-      // Use addPromotedParameter method and set type and visibility
-      const param = constructor.addPromotedParameter(fieldName);
-      param.setType(phpType);
-      this.setVisibilityOnElement(param, visibility);
+        const param = constructor.addPromotedParameter(fieldName);
+        param.setType(phpType);
+        this.setVisibilityOnElement(param, visibility);
 
-      // Add Doctrine attributes if using attribute mapping
-      if (options.useAttributeMapping) {
-        if (column.name === 'id' || column.autoIncrement) {
-          // Add ID attributes
-          param.addAttribute('ORM\\Id');
-          param.addAttribute('ORM\\Column', [new Literal("type: 'integer'")]);
-          if (column.autoIncrement) {
-            param.addAttribute('ORM\\GeneratedValue');
-          }
-        } else {
-          // Add regular column attributes
-          const field = ormMapping.fields.find((f) => f.name === fieldName);
-          if (field) {
-            this.addColumnAttribute(param, field, options);
+        if (options.useAttributeMapping) {
+          if (column.name === 'id' || column.autoIncrement) {
+            param.addAttribute('ORM\\Id');
+            param.addAttribute('ORM\\Column', [new Literal("type: 'integer'")]);
+            if (column.autoIncrement) {
+              param.addAttribute('ORM\\GeneratedValue');
+            }
+          } else {
+            const field = ormMapping.fields.find((f) => f.name === fieldName);
+            if (field) {
+              this.addColumnAttribute(param, field, options);
+            }
           }
         }
-      }
-    }
-
-    // Add required relationship parameters with property promotion using addPromotedParameter method
-    for (const relationship of constructorData.relationships) {
-      let paramType: string;
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        paramType = 'Collection';
       } else {
-        paramType = relationship.targetEntity;
-      }
+        const relationship = item.relationship;
+        let paramType: string;
+        if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+          paramType = 'Collection';
+        } else {
+          paramType = relationship.targetEntity;
+        }
 
-      // Use addPromotedParameter method and set type and visibility
-      const param = constructor.addPromotedParameter(relationship.field);
-      param.setType(paramType);
-      this.setVisibilityOnElement(param, visibility);
+        const param = constructor.addPromotedParameter(relationship.field);
+        param.setType(paramType);
+        this.setVisibilityOnElement(param, visibility);
 
-      // Add Doctrine relationship attributes if using attribute mapping
-      if (options.useAttributeMapping) {
-        this.addRelationshipAttribute(param, relationship, schema);
+        if (options.useAttributeMapping) {
+          this.addRelationshipAttribute(param, relationship, schema);
+        }
       }
     }
   }
@@ -305,101 +289,94 @@ export class PHPEntityGenerator {
       }
     }
 
-    // Generate field accessors
-    for (const field of ormMapping.fields) {
-      const shouldGenerateGetter =
-        options.generateGetters && this.shouldGenerateGetter(field, options.selectedTraits || [], options);
-      const shouldGenerateSetter =
-        options.generateSetters && this.shouldGenerateSetter(field, options.selectedTraits || [], options);
+    // Generate accessors in schema column order (fields and relationships interleaved)
+    const orderedMembers = this.getOrderedMembers(schema, ormMapping, options);
+    for (const member of orderedMembers) {
+      if (member.type === 'field') {
+        const field = member.field;
+        const shouldGenerateGetter =
+          options.generateGetters && this.shouldGenerateGetter(field, options.selectedTraits || [], options);
+        const shouldGenerateSetter =
+          options.generateSetters && this.shouldGenerateSetter(field, options.selectedTraits || [], options);
 
-      if (shouldGenerateGetter) {
-        const getterName = this.getGetterNameFromField(field.name, {
-          name: field.name,
+        if (shouldGenerateGetter) {
+          const getterName = this.getGetterNameFromField(field.name, {
+            name: field.name,
+          } as TableColumn);
+          if (!traitMethods.has(getterName)) {
+            const getter = class_.addMethod(getterName);
+            getter.setVisibility('public');
+            getter.setReturnType(field.nullable ? `?${field.phpType}` : field.phpType);
+            getter.setBody(`return $this->${field.name};`);
+          }
+        }
+
+        if (shouldGenerateSetter) {
+          const setterName = `set${toPascalCase(field.name)}`;
+          if (!traitMethods.has(setterName)) {
+            const returnType = options.generateFluentSetters ? 'self' : 'void';
+            const returnStatement = options.generateFluentSetters ? 'return $this;' : '';
+
+            const setter = class_.addMethod(setterName);
+            setter.setVisibility('public');
+            setter.setReturnType(returnType);
+
+            const param = setter.addParameter(field.name);
+            param.setType(field.nullable ? `?${field.phpType}` : field.phpType);
+            setter.setBody(
+              `$this->${field.name} = $${field.name};${returnStatement ? '\n        ' + returnStatement : ''}`
+            );
+          }
+        }
+      } else {
+        const relationship = member.relationship;
+        if (traitProperties.has(relationship.field)) continue;
+
+        const getterName = this.getGetterNameFromField(relationship.field, {
+          name: relationship.field,
         } as TableColumn);
-        if (!traitMethods.has(getterName)) {
+        const setterName = `set${toPascalCase(relationship.field)}`;
+
+        let isNullable = false;
+        if (relationship.joinColumn) {
+          const correspondingColumn = schema.columns.find((col) => col.name === relationship.joinColumn);
+          if (correspondingColumn && correspondingColumn.nullable) isNullable = true;
+        }
+        if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+          isNullable = true;
+        }
+
+        let returnType: string;
+        let paramType: string;
+        if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+          returnType = isNullable ? '?Collection' : 'Collection';
+          paramType = isNullable ? '?Collection' : 'Collection';
+        } else {
+          returnType = isNullable ? `?${relationship.targetEntity}` : relationship.targetEntity;
+          paramType = isNullable ? `?${relationship.targetEntity}` : relationship.targetEntity;
+        }
+
+        if (options.generateGetters && !traitMethods.has(getterName)) {
           const getter = class_.addMethod(getterName);
           getter.setVisibility('public');
-          getter.setReturnType(field.nullable ? `?${field.phpType}` : field.phpType);
-          getter.setBody(`return $this->${field.name};`);
+          getter.setReturnType(returnType);
+          getter.setBody(`return $this->${relationship.field};`);
         }
-      }
 
-      if (shouldGenerateSetter) {
-        const setterName = `set${toPascalCase(field.name)}`;
-        if (!traitMethods.has(setterName)) {
-          const returnType = options.generateFluentSetters ? 'self' : 'void';
+        if (options.generateSetters && !traitMethods.has(setterName)) {
+          const setterReturnType = options.generateFluentSetters ? 'self' : 'void';
           const returnStatement = options.generateFluentSetters ? 'return $this;' : '';
 
           const setter = class_.addMethod(setterName);
           setter.setVisibility('public');
-          setter.setReturnType(returnType);
+          setter.setReturnType(setterReturnType);
 
-          const param = setter.addParameter(field.name);
-          param.setType(field.nullable ? `?${field.phpType}` : field.phpType);
+          const param = setter.addParameter(relationship.field);
+          param.setType(paramType);
           setter.setBody(
-            `$this->${field.name} = $${field.name};${returnStatement ? '\n        ' + returnStatement : ''}`
+            `$this->${relationship.field} = $${relationship.field};${returnStatement ? '\n        ' + returnStatement : ''}`
           );
         }
-      }
-    }
-
-    // Generate relationship accessors
-    for (const relationship of ormMapping.relationships) {
-      if (traitProperties.has(relationship.field)) {
-        continue;
-      }
-
-      const getterName = this.getGetterNameFromField(relationship.field, {
-        name: relationship.field,
-      } as TableColumn);
-      const setterName = `set${toPascalCase(relationship.field)}`;
-
-      // Determine types and nullability
-      let isNullable = false;
-      if (relationship.joinColumn) {
-        const correspondingColumn = schema.columns.find((col) => col.name === relationship.joinColumn);
-        if (correspondingColumn && correspondingColumn.nullable) {
-          isNullable = true;
-        }
-      }
-
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        isNullable = true;
-      }
-
-      let returnType: string;
-      let paramType: string;
-
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        returnType = isNullable ? '?Collection' : 'Collection';
-        paramType = isNullable ? '?Collection' : 'Collection';
-      } else {
-        returnType = isNullable ? `?${relationship.targetEntity}` : relationship.targetEntity;
-        paramType = isNullable ? `?${relationship.targetEntity}` : relationship.targetEntity;
-      }
-
-      // Generate getter
-      if (options.generateGetters && !traitMethods.has(getterName)) {
-        const getter = class_.addMethod(getterName);
-        getter.setVisibility('public');
-        getter.setReturnType(returnType);
-        getter.setBody(`return $this->${relationship.field};`);
-      }
-
-      // Generate setter
-      if (options.generateSetters && !traitMethods.has(setterName)) {
-        const setterReturnType = options.generateFluentSetters ? 'self' : 'void';
-        const returnStatement = options.generateFluentSetters ? 'return $this;' : '';
-
-        const setter = class_.addMethod(setterName);
-        setter.setVisibility('public');
-        setter.setReturnType(setterReturnType);
-
-        const param = setter.addParameter(relationship.field);
-        param.setType(paramType);
-        setter.setBody(
-          `$this->${relationship.field} = $${relationship.field};${returnStatement ? '\n        ' + returnStatement : ''}`
-        );
       }
     }
   }
@@ -493,65 +470,85 @@ export class PHPEntityGenerator {
     return true; // No trait provides it, so we should generate it
   }
 
+  /**
+   * Returns members (fields and relationships) in schema column order.
+   * Used to generate properties, constructor params, and accessors in the same order as columns.
+   */
+  private static getOrderedMembers(
+    schema: TableSchema,
+    ormMapping: { fields: ORMFieldMapping[]; relationships: Relationship[] },
+    options: GenerationOptions
+  ): OrderedMember[] {
+    const result: OrderedMember[] = [];
+    for (const column of schema.columns) {
+      if (column.name === 'id' || column.autoIncrement) {
+        continue;
+      }
+      const isRelationshipCol =
+        column.name.endsWith('_id') && ORMMappingUtils.isConfiguredAsRelationship(column.name, options);
+      if (isRelationshipCol) {
+        const relationship = ormMapping.relationships.find((r) => r.joinColumn === column.name);
+        if (relationship) {
+          result.push({ type: 'relationship', relationship });
+        }
+      } else {
+        const field = ormMapping.fields.find((f) => f.columnName === column.name);
+        if (field) {
+          result.push({ type: 'field', field });
+        }
+      }
+    }
+    return result;
+  }
+
+  private static isRelationshipRequired(relationship: Relationship, schema: TableSchema): boolean {
+    if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
+      return false;
+    }
+    if (!relationship.joinColumn) {
+      return false;
+    }
+    const col = schema.columns.find((c) => c.name === relationship.joinColumn);
+    return col ? !col.nullable : false;
+  }
+
+  /**
+   * Returns constructor parameters in schema column order: id first (if required), then each column/relationship in table order.
+   */
   private static getConstructorColumns(
     schema: TableSchema,
     options: GenerationOptions,
     traitProperties?: Set<string>
-  ): { columns: TableColumn[]; relationships: Relationship[] } {
+  ): {
+    ordered: Array<{ type: 'column'; column: TableColumn } | { type: 'relationship'; relationship: Relationship }>;
+  } {
     const ormMapping = ORMMappingUtils.createORMMapping(schema, options);
+    const orderedMembers = this.getOrderedMembers(schema, ormMapping, options);
+    const ordered: Array<
+      { type: 'column'; column: TableColumn } | { type: 'relationship'; relationship: Relationship }
+    > = [];
 
-    const columns: TableColumn[] = [];
-    const relationships: Relationship[] = [];
-
-    // Check if ID field should be in constructor (if it's required and not provided by traits)
     const idColumn = schema.columns.find((col) => col.name === 'id' || col.autoIncrement);
     if (idColumn && !idColumn.nullable && !traitProperties?.has('id')) {
-      columns.unshift(idColumn); // Add ID at the beginning
+      ordered.push({ type: 'column', column: idColumn });
     }
 
-    for (const field of ormMapping.fields) {
-      if (traitProperties && traitProperties.has(field.name)) {
-        continue;
-      }
-
-      if (field.nullable) {
-        continue;
-      }
-
-      if (field.isRelationship && field.relationship) {
-        relationships.push(field.relationship);
+    for (const member of orderedMembers) {
+      if (member.type === 'field') {
+        if (traitProperties?.has(member.field.name)) continue;
+        if (member.field.nullable) continue;
+        const column = schema.columns.find((c) => ORMMappingUtils.getFieldName(c.name, options) === member.field.name);
+        if (column) {
+          ordered.push({ type: 'column', column });
+        }
       } else {
-        const column = schema.columns.find((col) => ORMMappingUtils.getFieldName(col.name, options) === field.name);
-        if (column && column.name !== 'id') {
-          // ID is already handled above
-          columns.push(column);
-        }
+        if (traitProperties?.has(member.relationship.field)) continue;
+        if (!this.isRelationshipRequired(member.relationship, schema)) continue;
+        ordered.push({ type: 'relationship', relationship: member.relationship });
       }
     }
 
-    for (const relationship of ormMapping.relationships) {
-      if (traitProperties && traitProperties.has(relationship.field)) {
-        continue;
-      }
-
-      let isRequired = true;
-      if (relationship.joinColumn) {
-        const correspondingColumn = schema.columns.find((col) => col.name === relationship.joinColumn);
-        if (correspondingColumn && correspondingColumn.nullable) {
-          isRequired = false;
-        }
-      }
-
-      if (relationship.type === 'one-to-many' || relationship.type === 'many-to-many') {
-        isRequired = false;
-      }
-
-      if (isRequired && !relationships.find((r) => r.field === relationship.field)) {
-        relationships.push(relationship);
-      }
-    }
-
-    return { columns, relationships };
+    return { ordered };
   }
 
   private static getGetterNameFromField(fieldName: string, _column: TableColumn): string {

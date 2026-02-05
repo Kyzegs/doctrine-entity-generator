@@ -490,6 +490,72 @@ describe('PHPEntityGenerator', () => {
 
       expect(php).not.toContain('Collection $comments');
     });
+
+    it('should place constructor params in schema column order (e.g. name, customer, createdAt)', () => {
+      const schema = createSchema({
+        columns: [
+          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+          { name: 'customer_id', type: 'int', nullable: false },
+          { name: 'created_at', type: 'datetime', nullable: false },
+        ],
+      });
+
+      const options: GenerationOptions = {
+        ...defaultOptions,
+        relationships: [
+          {
+            id: '1',
+            field: 'customer',
+            type: 'many-to-one',
+            targetEntity: 'Customer',
+            joinColumn: 'customer_id',
+          },
+        ],
+      };
+      const php = PHPEntityGenerator.generate(schema, options);
+
+      // Constructor must have name, then customer, then created_at (schema order)
+      const constructMatch = php.match(/function __construct\(([^)]*)\)/s);
+      expect(constructMatch).toBeTruthy();
+      const params = constructMatch![1].replace(/\s+/g, ' ').trim();
+      expect(params).toContain('string $name');
+      expect(params).toContain('Customer $customer');
+      expect(params).toContain('DateTimeImmutable $createdAt');
+      const namePos = params.indexOf('$name');
+      const customerPos = params.indexOf('$customer');
+      const createdAtPos = params.indexOf('$createdAt');
+      expect(namePos).toBeLessThan(customerPos);
+      expect(customerPos).toBeLessThan(createdAtPos);
+    });
+
+    it('should not define a separate property for required relationship (only in constructor)', () => {
+      const schema = createSchema({
+        columns: [
+          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
+          { name: 'customer_id', type: 'int', nullable: false },
+        ],
+      });
+
+      const options: GenerationOptions = {
+        ...defaultOptions,
+        relationships: [
+          {
+            id: '1',
+            field: 'customer',
+            type: 'many-to-one',
+            targetEntity: 'Customer',
+            joinColumn: 'customer_id',
+          },
+        ],
+      };
+      const php = PHPEntityGenerator.generate(schema, options);
+
+      // Required relation: only in constructor (promoted)
+      expect(php).toContain('Customer $customer');
+      // No standalone class property for customer (no "private Customer $customer;" or "= null")
+      expect(php).not.toMatch(/private\s+Customer\s+\$customer\s*[=;]/);
+    });
   });
 
   describe('generate - Accessors (Getters/Setters)', () => {
