@@ -2,8 +2,9 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getSharedData, ShareableCode } from '@/lib/utils';
-import { TabbedCodeOutput } from '@/components/tabbed-code-output';
+import { getSharedData, ShareableCode, getErrorMessage } from '@/lib/utils';
+import { downloadEntitiesAsZip } from '@/lib/bulk-entity-zip';
+import { EntityCodeOutput } from '@/components/entity-code-output';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Code2 } from 'lucide-react';
@@ -15,7 +16,6 @@ export function SharedCodeClient() {
   const [sharedData, setSharedData] = useState<ShareableCode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('');
 
   useEffect(() => {
     const loadSharedData = async () => {
@@ -30,9 +30,8 @@ export function SharedCodeClient() {
         setSharedData(data);
       } catch (err) {
         console.error('Failed to load shared data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Invalid or corrupted share link';
+        const errorMessage = getErrorMessage(err, 'Invalid or corrupted share link');
         setError(errorMessage);
-
         toast.error('Failed to load shared code', {
           description:
             errorMessage === 'Link has expired'
@@ -49,6 +48,17 @@ export function SharedCodeClient() {
 
   const handleBackToGenerator = () => {
     router.push('/');
+  };
+
+  const handleDownloadAll = async () => {
+    if (!sharedData?.entities?.length) return;
+    try {
+      const count = await downloadEntitiesAsZip(sharedData.entities, 'entities.zip');
+      if (count > 0) toast.success(`Downloaded ${count} entities as ZIP`);
+    } catch (err) {
+      console.error('Failed to create ZIP:', err);
+      toast.error('Failed to create download');
+    }
   };
 
   if (loading) {
@@ -80,38 +90,8 @@ export function SharedCodeClient() {
     );
   }
 
-  const tabs = [
-    ...(sharedData.xmlOutput
-      ? [
-          {
-            id: 'xml',
-            title: 'Doctrine XML Mapping',
-            code: sharedData.xmlOutput,
-            language: 'xml',
-          },
-        ]
-      : []),
-    ...(sharedData.phpOutput
-      ? [
-          {
-            id: 'php',
-            title: 'PHP Entity Class',
-            code: sharedData.phpOutput,
-            language: 'php',
-          },
-        ]
-      : []),
-    ...(sharedData.sqlInput
-      ? [
-          {
-            id: 'sql',
-            title: 'Original SQL',
-            code: sharedData.sqlInput,
-            language: 'sql',
-          },
-        ]
-      : []),
-  ];
+  const entities = sharedData.entities.filter((e) => !e.hasError);
+  const displayEntities = sharedData.entities.length > 1 ? entities : sharedData.entities;
 
   return (
     <div className="w-full min-h-screen bg-background">
@@ -138,8 +118,9 @@ export function SharedCodeClient() {
               <p className="text-muted-foreground">
                 Contains:{' '}
                 {[
-                  sharedData.xmlOutput && 'XML Mapping',
-                  sharedData.phpOutput && 'PHP Entity',
+                  sharedData.entities.length > 1 ? `${sharedData.entities.length} Entities` : null,
+                  sharedData.entities.length === 1 && sharedData.entities[0]?.xmlOutput && 'XML Mapping',
+                  sharedData.entities.length === 1 && sharedData.entities[0]?.phpOutput && 'PHP Entity',
                   sharedData.sqlInput && 'Original SQL',
                 ]
                   .filter(Boolean)
@@ -149,14 +130,13 @@ export function SharedCodeClient() {
           </div>
         </div>
 
-        {tabs.length > 0 ? (
-          <TabbedCodeOutput tabs={tabs} hideShareButton={true} activeTab={activeTab} onTabChange={setActiveTab} />
-        ) : (
-          <div className="text-center p-12 bg-card border border-border rounded-lg">
-            <Code2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No code available in this share link</p>
-          </div>
-        )}
+        <EntityCodeOutput
+          entities={displayEntities}
+          sqlInput={sharedData.sqlInput}
+          onDownloadAll={sharedData.entities.length > 1 ? handleDownloadAll : undefined}
+          hideShareButton
+          emptyMessage="No code available in this share link"
+        />
       </main>
     </div>
   );

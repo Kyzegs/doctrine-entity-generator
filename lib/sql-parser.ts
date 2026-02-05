@@ -4,6 +4,64 @@ import { DatabaseDialect } from './example-queries';
 
 export class SQLParser {
   private static parser = new Parser();
+  /**
+   * Parse multiple CREATE TABLE statements from SQL input
+   */
+  static parseMultipleTables(sql: string, dialect: DatabaseDialect = DatabaseDialect.MYSQL): TableSchema[] {
+    try {
+      const parserOptions = {
+        database: dialect,
+      };
+
+      const ast = this.parser.astify(sql, parserOptions);
+
+      if (!ast) {
+        throw new Error('Invalid SQL statement');
+      }
+
+      // Handle both single statement and multiple statements
+      const statements = Array.isArray(ast) ? ast : [ast];
+
+      // Filter only CREATE TABLE statements
+      const createTableStatements = statements.filter(
+        (stmt) => stmt && stmt.type === 'create' && (stmt as any).keyword === 'table'
+      );
+
+      if (createTableStatements.length === 0) {
+        throw new Error('No CREATE TABLE statements found');
+      }
+
+      // Parse each CREATE TABLE statement
+      const tables: TableSchema[] = [];
+      for (const createTable of createTableStatements) {
+        const tableName = this.extractTableName(createTable);
+        const columns = this.extractColumns(createTable);
+        const indexes = this.extractIndexes(createTable);
+        const constraints = this.extractConstraints(createTable);
+        const tableOptions = this.extractTableOptions(createTable);
+
+        tables.push({
+          name: tableName,
+          columns,
+          indexes,
+          constraints,
+          engine: tableOptions.engine,
+          charset: tableOptions.charset,
+          collation: tableOptions.collation,
+          autoIncrement: tableOptions.autoIncrement,
+        });
+      }
+
+      return tables;
+    } catch (error) {
+      console.error('SQL parsing error:', error);
+
+      if (error instanceof Error) {
+        throw new Error(`SQL parsing error: ${error.message}`);
+      }
+      throw new Error('Failed to parse SQL statements');
+    }
+  }
 
   static parseCreateTable(sql: string, dialect: DatabaseDialect = DatabaseDialect.MYSQL): TableSchema {
     try {

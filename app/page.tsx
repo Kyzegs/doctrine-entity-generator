@@ -4,13 +4,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { SQLParser } from '@/lib/sql-parser';
 import { DoctrineXMLGenerator } from '@/lib/doctrine-xml-generator';
 import { PHPEntityGenerator } from '@/lib/php-entity-generator';
-import { GenerationOptions, ShareableConfiguration } from '@/lib/types';
-import { TabbedCodeOutput } from '@/components/tabbed-code-output';
+import { GenerationOptions, ShareableConfiguration, GeneratedEntity, Relationship } from '@/lib/types';
+import { EntityCodeOutput } from '@/components/entity-code-output';
 import { OptionsForm } from '@/components/options-form';
 import { AppSidebar } from '@/components/app-sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,7 +19,18 @@ import CodeMirror from '@uiw/react-codemirror';
 import { sql, MySQL, PostgreSQL, SQLite } from '@codemirror/lang-sql';
 import { tomorrowNight } from '@/lib/codemirror-theme-tomorrow-night';
 import { toast } from 'sonner';
-import { createShareUrl, copyToClipboard, ShareableCode, toPascalCase, toCamelCase } from '@/lib/utils';
+import {
+  createShareUrl,
+  copyToClipboard,
+  ShareableCode,
+  toPascalCase,
+  toCamelCase,
+  getErrorMessage,
+  computeEntityName,
+  buildShareableConfiguration,
+  mergeShareableConfigIntoOptions,
+} from '@/lib/utils';
+import { downloadBlob, downloadEntitiesAsZip } from '@/lib/bulk-entity-zip';
 import { DEFAULT_QUERY, exampleQueries, DatabaseDialect } from '@/lib/example-queries';
 
 const DEFAULT_OPTIONS: GenerationOptions = {
@@ -69,34 +81,30 @@ export default function Home() {
   const [options, setOptions] = useState<GenerationOptions>(DEFAULT_OPTIONS);
   const [xmlOutput, setXmlOutput] = useState('');
   const [phpOutput, setPhpOutput] = useState('');
+  const [generatedEntityName, setGeneratedEntityName] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [relationshipSuggestions, setRelationshipSuggestions] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('xml');
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [bulkEntities, setBulkEntities] = useState<GeneratedEntity[]>([]);
+  const [hasMultipleTables, setHasMultipleTables] = useState(false);
+  const [savedRelationships, setSavedRelationships] = useState<Relationship[]>([]);
+  const [savedTraits, setSavedTraits] = useState<string[]>([]);
 
   const sqlEditorExtensions = useMemo(() => {
     const dialect = CODEMIRROR_SQL_DIALECTS[options.databaseDialect] ?? MySQL;
     return [sql({ dialect })];
   }, [options.databaseDialect]);
 
+  const STORAGE_KEY = 'entityGeneratorConfig';
+
   // Load from localStorage after hydration
   useEffect(() => {
-    const saved = localStorage.getItem('entityGeneratorConfig');
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
     if (saved) {
       try {
-        const parsedConfig = JSON.parse(saved);
-        // Merge shareable config with DEFAULT_OPTIONS (relationships come from defaults)
-        const mergedOptions = {
-          ...DEFAULT_OPTIONS,
-          namespace: parsedConfig.namespace ?? DEFAULT_OPTIONS.namespace,
-          entityPrefix: parsedConfig.entityPrefix ?? DEFAULT_OPTIONS.entityPrefix,
-          entitySuffix: parsedConfig.entitySuffix ?? DEFAULT_OPTIONS.entitySuffix,
-          customDataTypes: parsedConfig.customDataTypes || DEFAULT_OPTIONS.customDataTypes,
-          columnFieldMappings: parsedConfig.columnFieldMappings || DEFAULT_OPTIONS.columnFieldMappings,
-          explicitlyDefineColumns: parsedConfig.explicitlyDefineColumns ?? DEFAULT_OPTIONS.explicitlyDefineColumns,
-          useAttributeMapping: parsedConfig.useAttributeMapping ?? DEFAULT_OPTIONS.useAttributeMapping,
-          customTraits: parsedConfig.customTraits || DEFAULT_OPTIONS.customTraits,
-        };
-        setOptions(mergedOptions);
+        const parsed = JSON.parse(saved) as Partial<ShareableConfiguration>;
+        const merged = { ...DEFAULT_OPTIONS, ...mergeShareableConfigIntoOptions(parsed) };
+        setOptions(merged);
       } catch {
         console.warn('Failed to parse saved config, using defaults');
         setOptions(DEFAULT_OPTIONS);
@@ -117,47 +125,18 @@ export default function Home() {
 
   const saveOptionsToLocalStorage = (newOptions: GenerationOptions) => {
     if (typeof window !== 'undefined') {
-      // Only save shareable configuration (exclude relationships as they're query-specific)
-      const shareableConfig = {
-        namespace: newOptions.namespace,
-        entityPrefix: newOptions.entityPrefix,
-        entitySuffix: newOptions.entitySuffix,
-        customDataTypes: newOptions.customDataTypes,
-        columnFieldMappings: newOptions.columnFieldMappings,
-        explicitlyDefineColumns: newOptions.explicitlyDefineColumns,
-        useAttributeMapping: newOptions.useAttributeMapping,
-        customTraits: newOptions.customTraits,
-      };
-      localStorage.setItem('entityGeneratorConfig', JSON.stringify(shareableConfig));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(buildShareableConfiguration(newOptions)));
     }
   };
 
-  const createShareableConfig = (): ShareableConfiguration => ({
-    version: '1.0',
-    exportedAt: new Date().toISOString(),
-    namespace: options.namespace,
-    entityPrefix: options.entityPrefix,
-    entitySuffix: options.entitySuffix,
-    customDataTypes: options.customDataTypes,
-    columnFieldMappings: options.columnFieldMappings,
-    explicitlyDefineColumns: options.explicitlyDefineColumns,
-    useAttributeMapping: options.useAttributeMapping,
-    customTraits: options.customTraits,
-  });
+  const createShareableConfig = (): ShareableConfiguration => buildShareableConfiguration(options);
 
   const exportToFile = () => {
     const shareableConfig = createShareableConfig();
     const dataStr = JSON.stringify(shareableConfig, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `entity-generator-config-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const filename = `entity-generator-config-${new Date().toISOString().split('T')[0]}.json`;
+    downloadBlob(dataBlob, filename);
   };
 
   const exportToClipboard = async () => {
@@ -228,6 +207,106 @@ export default function Home() {
       alert('Failed to read from clipboard. Please try importing from file instead.');
     }
   };
+
+  const handleSqlFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file extension
+    const validExtensions = ['.sql', '.txt'];
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    if (!validExtensions.includes(fileExtension)) {
+      toast.error('Invalid File Type', {
+        description: 'Please upload a .sql or .txt file',
+      });
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        setSqlInput(content);
+        toast.success('SQL File Loaded', {
+          description: `Loaded ${file.name}`,
+        });
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Failed to Read File', {
+        description: 'An error occurred while reading the file',
+      });
+    };
+    reader.readAsText(file);
+
+    // Reset input so the same file can be uploaded again
+    event.target.value = '';
+  };
+
+  // Function to detect multiple CREATE TABLE statements
+  const detectMultipleTables = (sql: string) => {
+    const createTableCount = (sql.match(/create\s+table/gi) || []).length;
+    const hasMultiple = createTableCount > 1;
+    setHasMultipleTables(hasMultiple);
+    return hasMultiple;
+  };
+
+  // Update multiple tables detection when SQL input changes
+  // Effect intentionally only depends on sqlInput to trigger when SQL changes
+  // It captures current values of options, savedRelationships, and savedTraits at that moment
+  useEffect(() => {
+    const hasMultiple = detectMultipleTables(sqlInput);
+
+    if (hasMultiple) {
+      // Clear relationship suggestions so they can't be used in bulk mode
+      setRelationshipSuggestions([]);
+
+      // Save current relationships and traits before clearing
+      if (options.relationships.length > 0 || options.selectedTraits.length > 0) {
+        setSavedRelationships([...options.relationships]);
+        setSavedTraits([...options.selectedTraits]);
+
+        const clearedOptions = {
+          ...options,
+          relationships: [],
+          selectedTraits: [],
+        };
+        setOptions(clearedOptions);
+        saveOptionsToLocalStorage(clearedOptions);
+
+        // Show notification about cleared configurations
+        const clearedItems = [];
+        if (options.relationships.length > 0) clearedItems.push('relationships');
+        if (options.selectedTraits.length > 0) clearedItems.push('traits');
+
+        toast.info('Configurations Cleared', {
+          description: `Previous ${clearedItems.join(' and ')} have been cleared for bulk generation.`,
+        });
+      }
+    } else {
+      // Restore saved relationships and traits when switching back to single table
+      if (savedRelationships.length > 0 || savedTraits.length > 0) {
+        const restoredOptions = {
+          ...options,
+          relationships: savedRelationships,
+          selectedTraits: savedTraits,
+        };
+        setOptions(restoredOptions);
+        saveOptionsToLocalStorage(restoredOptions);
+
+        // Clear saved configurations
+        setSavedRelationships([]);
+        setSavedTraits([]);
+
+        toast.success('Configurations Restored', {
+          description: 'Previous relationships and traits have been restored.',
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sqlInput]);
 
   const suggestRelationships = (schema: any) => {
     const suggestions: any[] = [];
@@ -304,26 +383,42 @@ export default function Home() {
     setRelationshipSuggestions((prev) => prev.filter((s) => s.column !== suggestion.column));
   };
 
-  const handleShareCode = async (_tabId: string) => {
+  const handleShare = async () => {
     try {
-      const shareData: ShareableCode = {
-        sqlInput: sqlInput,
-        options: options,
-      };
+      const entitiesToShare: GeneratedEntity[] = isBulkMode
+        ? bulkEntities
+        : [
+            (() => {
+              let tableName = 'table';
+              try {
+                const schema = SQLParser.parseCreateTable(sqlInput, options.databaseDialect);
+                tableName = schema.name;
+              } catch {
+                // use defaults
+              }
+              return {
+                tableName,
+                entityName: computeEntityName(options, tableName),
+                xmlOutput: xmlOutput || undefined,
+                phpOutput: phpOutput ?? '',
+                hasError: false,
+              };
+            })(),
+          ];
 
-      // Always include both XML and PHP if they exist
-      if (xmlOutput) {
-        shareData.xmlOutput = xmlOutput;
-      }
-      if (phpOutput) {
-        shareData.phpOutput = phpOutput;
-      }
+      const shareData: ShareableCode = {
+        entities: entitiesToShare,
+        sqlInput,
+        options,
+      };
 
       const shareUrl = await createShareUrl(shareData);
       await copyToClipboard(shareUrl);
 
       toast.success('Share link copied!', {
-        description: 'Share this link to show your generated code to others.',
+        description: isBulkMode
+          ? `Shared ${entitiesToShare.length} entities`
+          : 'Share this link to show your generated code to others.',
       });
     } catch (error) {
       console.error('Failed to create share link:', error);
@@ -333,8 +428,89 @@ export default function Home() {
     }
   };
 
+  const generateBulkEntities = () => {
+    try {
+      // Parse multiple tables
+      const tables = SQLParser.parseMultipleTables(sqlInput, options.databaseDialect);
+
+      // Bulk generation never uses relationships or traits (single-table-only features)
+      const bulkOptions = {
+        ...options,
+        relationships: [],
+        selectedTraits: [],
+      };
+
+      const entities: GeneratedEntity[] = [];
+
+      for (const schema of tables) {
+        try {
+          const entityName = computeEntityName(bulkOptions, schema.name);
+
+          let xmlOutput: string | undefined;
+          if (!bulkOptions.useAttributeMapping) {
+            xmlOutput = DoctrineXMLGenerator.generate(schema, bulkOptions);
+          }
+
+          const phpOutput = PHPEntityGenerator.generate(schema, bulkOptions);
+
+          entities.push({
+            tableName: schema.name,
+            entityName,
+            xmlOutput,
+            phpOutput,
+            hasError: false,
+          });
+        } catch (err) {
+          entities.push({
+            tableName: schema.name,
+            entityName: computeEntityName(bulkOptions, schema.name),
+            xmlOutput: undefined,
+            phpOutput: '',
+            hasError: true,
+            errorMessage: getErrorMessage(err),
+          });
+        }
+      }
+
+      setBulkEntities(entities);
+      setIsBulkMode(true);
+      setGeneratedEntityName(null);
+
+      const successCount = entities.filter((e) => !e.hasError).length;
+      const failCount = entities.filter((e) => e.hasError).length;
+
+      toast.success(`Generated ${successCount} entities` + (failCount > 0 ? ` (${failCount} failed)` : ''));
+    } catch (err) {
+      console.error('Error generating bulk entities:', err);
+      toast.error('Bulk Generation Failed', {
+        description: getErrorMessage(err),
+      });
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    if (bulkEntities.length === 0) return;
+    try {
+      const count = await downloadEntitiesAsZip(bulkEntities, 'entities.zip');
+      if (count > 0) toast.success(`Downloaded ${count} entities as ZIP`);
+    } catch (err) {
+      console.error('Failed to create ZIP:', err);
+      toast.error('Failed to create download');
+    }
+  };
+
   const generateCode = () => {
     try {
+      // Check if there are multiple CREATE TABLE statements
+      if (hasMultipleTables) {
+        // Switch to bulk mode
+        generateBulkEntities();
+        return;
+      }
+
+      // Single table mode
+      setIsBulkMode(false);
+
       // Parse the SQL with the selected database dialect
       const schema = SQLParser.parseCreateTable(sqlInput, options.databaseDialect);
 
@@ -356,25 +532,23 @@ export default function Home() {
         setRelationshipSuggestions([]);
       }
 
+      setGeneratedEntityName(computeEntityName(options, schema.name));
+
       // Generate Doctrine XML mapping (only if not using attribute mapping)
       if (!options.useAttributeMapping) {
         const xml = DoctrineXMLGenerator.generate(schema, options);
         setXmlOutput(xml);
       } else {
         setXmlOutput('');
-        setActiveTab('php');
       }
 
       // Generate PHP entity class
       const php = PHPEntityGenerator.generate(schema, options);
       setPhpOutput(php);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       console.error('Error generating code:', err);
-
-      // Show error toast
       toast.error('Code Generation Failed', {
-        description: errorMessage,
+        description: getErrorMessage(err),
       });
     }
   };
@@ -414,28 +588,46 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Hidden file input */}
+          {/* Hidden file inputs */}
           <input id="file-import" type="file" accept=".json" onChange={importFromFile} className="hidden" />
+          <input
+            id="sql-file-upload"
+            type="file"
+            accept=".sql,.txt"
+            onChange={handleSqlFileUpload}
+            className="hidden"
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
-                  <Label htmlFor="sql-input" className="block text-sm font-medium">
+                  <Label htmlFor="sql-input" className="text-sm font-medium">
                     SQL CREATE TABLE Statement
                   </Label>
-                  <Select onValueChange={updateSqlForDialect}>
-                    <SelectTrigger className="w-[280px]">
-                      <SelectValue placeholder="Load example SQL..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {exampleQueries.map((example) => (
-                        <SelectItem key={example.name} value={example.name}>
-                          {example.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Select onValueChange={updateSqlForDialect}>
+                      <SelectTrigger className="w-[280px]">
+                        <SelectValue placeholder="Load example SQL..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {exampleQueries.map((example) => (
+                          <SelectItem key={example.name} value={example.name}>
+                            {example.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('sql-file-upload')?.click()}
+                      className="h-9"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload SQL File
+                    </Button>
+                  </div>
                 </div>
                 <div
                   id="sql-input"
@@ -449,7 +641,7 @@ export default function Home() {
                     minHeight="16rem"
                     theme={tomorrowNight}
                     extensions={sqlEditorExtensions}
-                    placeholder="Paste your CREATE TABLE statement here..."
+                    placeholder="Paste your CREATE TABLE statement here or upload a .sql file..."
                     basicSetup={{ lineNumbers: true, foldGutter: false }}
                   />
                 </div>
@@ -477,40 +669,31 @@ export default function Home() {
                       updateSqlForDialect(newOptions.databaseDialect);
                     }
                   }}
+                  hasMultipleTables={hasMultipleTables}
                 />
               )}
             </div>
 
             <div className="space-y-6">
-              {(xmlOutput || phpOutput) && (
-                <TabbedCodeOutput
-                  tabs={[
-                    ...(xmlOutput
+              <EntityCodeOutput
+                entities={
+                  isBulkMode && bulkEntities.length > 0
+                    ? bulkEntities
+                    : xmlOutput || phpOutput
                       ? [
                           {
-                            id: 'xml',
-                            title: 'Doctrine XML Mapping',
-                            code: xmlOutput,
-                            language: 'xml',
+                            tableName: '',
+                            entityName: generatedEntityName ?? 'Entity',
+                            xmlOutput: xmlOutput || undefined,
+                            phpOutput: phpOutput ?? '',
+                            hasError: false,
                           },
                         ]
-                      : []),
-                    ...(phpOutput
-                      ? [
-                          {
-                            id: 'php',
-                            title: 'PHP Entity Class',
-                            code: phpOutput,
-                            language: 'php',
-                          },
-                        ]
-                      : []),
-                  ]}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  onShare={handleShareCode}
-                />
-              )}
+                      : []
+                }
+                onDownloadAll={isBulkMode ? handleDownloadAll : undefined}
+                onShare={handleShare}
+              />
             </div>
           </div>
 
@@ -527,8 +710,8 @@ export default function Home() {
                 Generate Code
               </Button>
 
-              {/* Relationship Suggestions Popover */}
-              {relationshipSuggestions.length > 0 && (
+              {/* Relationship Suggestions Popover (single table only) */}
+              {!hasMultipleTables && relationshipSuggestions.length > 0 && (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="lg" className="gap-2">

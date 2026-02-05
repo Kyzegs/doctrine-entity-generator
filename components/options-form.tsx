@@ -15,9 +15,10 @@ import { RelationshipManagement } from './relationship-management';
 interface OptionsFormProps {
   options: GenerationOptions;
   onChange: (options: GenerationOptions) => void;
+  hasMultipleTables?: boolean;
 }
 
-function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
+function OptionsFormComponent({ options, onChange, hasMultipleTables = false }: OptionsFormProps) {
   // Initialize all traits as collapsed by default
 
   const [draggedTraitId, setDraggedTraitId] = useState<string | null>(null);
@@ -413,19 +414,37 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
         </div>
       </div>
 
-      {/* Relationships Management */}
-      <RelationshipManagement options={options} onOptionsChange={(newOptions) => onChange(newOptions)} />
+      {/* Relationships Management - Only available for single table */}
+      {!hasMultipleTables && (
+        <RelationshipManagement options={options} onOptionsChange={(newOptions) => onChange(newOptions)} />
+      )}
 
-      {/* Custom Traits Management */}
-      <TraitManagement
-        options={options}
-        onOptionsChange={(newOptions) => onChange(newOptions)}
-        draggedTraitId={draggedTraitId}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onDragEnd={handleDragEnd}
-      />
+      {/* Custom Traits Management - Only available for single table */}
+      {!hasMultipleTables && (
+        <TraitManagement
+          options={options}
+          onOptionsChange={(newOptions) => onChange(newOptions)}
+          draggedTraitId={draggedTraitId}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+        />
+      )}
+
+      {/* Multiple Tables Notice */}
+      {hasMultipleTables && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-4">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold mb-2">
+            <span className="text-lg">ℹ️</span>
+            Multiple Tables Detected
+          </div>
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Relationships and custom traits are not available when generating multiple entities. These features are only
+            supported for single table generation.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

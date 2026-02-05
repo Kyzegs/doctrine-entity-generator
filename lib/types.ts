@@ -132,3 +132,12 @@ export interface Preset {
   updatedAt: string;
   options: GenerationOptions;
 }
+
+export interface GeneratedEntity {
+  tableName: string;
+  entityName: string;
+  xmlOutput?: string;
+  phpOutput: string;
+  hasError: boolean;
+  errorMessage?: string;
+}

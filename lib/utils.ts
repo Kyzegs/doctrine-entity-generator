@@ -1,16 +1,91 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { GenerationOptions } from './types';
+import { GenerationOptions, GeneratedEntity, ShareableConfiguration } from './types';
 import { prisma } from './prisma';
+
+/**
+ * Extract a user-facing error message from an unknown error.
+ */
+export function getErrorMessage(err: unknown, fallback = 'An error occurred'): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
+/**
+ * Compute entity class name from options and table name.
+ * Uses options.entityName if set, otherwise prefix + PascalCase(tableName) + suffix.
+ */
+export function computeEntityName(
+  options: Pick<GenerationOptions, 'entityName' | 'entityPrefix' | 'entitySuffix'>,
+  tableName: string
+): string {
+  if (options.entityName?.trim()) return options.entityName.trim();
+  return options.entityPrefix + toPascalCase(tableName) + options.entitySuffix;
+}
+
+/** Option keys that are persisted/shared (excludes entityName, relationships, etc.). */
+type ShareableOptionKey = keyof Pick<
+  GenerationOptions,
+  | 'namespace'
+  | 'entityPrefix'
+  | 'entitySuffix'
+  | 'customDataTypes'
+  | 'columnFieldMappings'
+  | 'explicitlyDefineColumns'
+  | 'useAttributeMapping'
+  | 'customTraits'
+>;
+const SHAREABLE_OPTION_KEYS: ShareableOptionKey[] = [
+  'namespace',
+  'entityPrefix',
+  'entitySuffix',
+  'customDataTypes',
+  'columnFieldMappings',
+  'explicitlyDefineColumns',
+  'useAttributeMapping',
+  'customTraits',
+];
+
+/**
+ * Build shareable configuration from current options (for export and for localStorage).
+ */
+export function buildShareableConfiguration(options: GenerationOptions): ShareableConfiguration {
+  const partial = SHAREABLE_OPTION_KEYS.reduce(
+    (acc, key) => {
+      acc[key] = options[key];
+      return acc;
+    },
+    {} as Record<string, unknown>
+  );
+  return {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    ...partial,
+  } as ShareableConfiguration;
+}
+
+/**
+ * Merge shareable config (e.g. from localStorage or import) into partial options.
+ * Returns an object with only the shareable keys set; use with spread over DEFAULT_OPTIONS.
+ */
+export function mergeShareableConfigIntoOptions(
+  parsed: Partial<ShareableConfiguration>
+): Partial<Pick<GenerationOptions, ShareableOptionKey>> {
+  return SHAREABLE_OPTION_KEYS.reduce(
+    (acc, key) => {
+      if (parsed[key] !== undefined) acc[key] = parsed[key] as never;
+      return acc;
+    },
+    {} as Record<string, unknown>
+  ) as Partial<Pick<GenerationOptions, ShareableOptionKey>>;
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Share utilities
+// Share utilities – normalized: always an array of entities; UI decides single vs bulk display
 export interface ShareableCode {
-  xmlOutput?: string;
-  phpOutput?: string;
+  entities: GeneratedEntity[];
   sqlInput?: string;
   options?: Partial<GenerationOptions>;
   timestamp?: string;
@@ -59,10 +134,13 @@ export async function createShareUrl(data: ShareableCode): Promise<string> {
   }
 }
 
+export type GetSharedDataResult = { data: ShareableCode; expiresAt: Date } | { expired: true } | null;
+
 /**
- * Retrieves shared data from the database (server-side)
+ * Retrieves shared data from the database (server-side).
+ * Returns { data, expiresAt } when found and valid, { expired: true } when found but expired (and deletes it), null when not found.
  */
-export async function getSharedDataServer(code: string): Promise<ShareableCode | null> {
+export async function getSharedDataServer(code: string): Promise<GetSharedDataResult> {
   try {
     const shareableLink = await prisma.shareableLink.findUnique({
       where: { code },
@@ -72,16 +150,17 @@ export async function getSharedDataServer(code: string): Promise<ShareableCode |
       return null;
     }
 
-    // Check if the link has expired
     if (new Date() > shareableLink.expiresAt) {
-      // Delete expired link
       await prisma.shareableLink.delete({
         where: { code },
       });
-      return null;
+      return { expired: true };
     }
 
-    return JSON.parse(shareableLink.data) as ShareableCode;
+    return {
+      data: JSON.parse(shareableLink.data) as ShareableCode,
+      expiresAt: shareableLink.expiresAt,
+    };
   } catch (error) {
     console.error('Failed to retrieve shared data:', error);
     return null;

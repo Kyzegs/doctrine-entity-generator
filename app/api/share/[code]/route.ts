@@ -1,37 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { getSharedDataServer } from '@/lib/utils';
 
 // GET /api/share/[code] - Retrieve a shareable link
-export async function GET(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
+    const result = await getSharedDataServer(code);
 
-    // Find the shareable link
-    const shareableLink = await prisma.shareableLink.findUnique({
-      where: { code },
-    });
-
-    if (!shareableLink) {
+    if (!result) {
       return NextResponse.json({ error: 'Link not found' }, { status: 404 });
     }
-
-    // Check if the link has expired
-    if (new Date() > shareableLink.expiresAt) {
-      // Delete expired link
-      await prisma.shareableLink.delete({
-        where: { code },
-      });
-
-      return NextResponse.json(
-        { error: 'Link has expired' },
-        { status: 410 } // 410 Gone
-      );
+    if ('expired' in result) {
+      return NextResponse.json({ error: 'Link has expired' }, { status: 410 });
     }
 
-    // Return the data
     return NextResponse.json({
-      data: JSON.parse(shareableLink.data),
-      expiresAt: shareableLink.expiresAt,
+      data: result.data,
+      expiresAt: result.expiresAt.toISOString(),
     });
   } catch (error) {
     console.error('Failed to retrieve shareable link:', error);

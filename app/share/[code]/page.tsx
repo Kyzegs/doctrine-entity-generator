@@ -5,7 +5,7 @@ import { DatabaseDialect } from '@/lib/example-queries';
 import { SharedCodeClient } from './shared-code-client';
 
 /**
- * Extract entity name from shared data
+ * Extract entity name from shared data (normalized: entities array)
  */
 function extractEntityInfo(sharedData: ShareableCode): {
   entityName: string;
@@ -15,49 +15,42 @@ function extractEntityInfo(sharedData: ShareableCode): {
   let entityName = 'Entity';
   let tableName = 'table';
   const codeTypes: string[] = [];
+  const first = sharedData.entities[0];
 
-  // Try to extract from PHP entity class
-  if (sharedData.phpOutput) {
-    codeTypes.push('PHP Entity');
-    const classMatch = sharedData.phpOutput.match(/class\s+(\w+)/);
-    if (classMatch) {
-      entityName = classMatch[1];
-    }
+  if (first) {
+    entityName = first.entityName;
+    tableName = first.tableName;
+    if (first.phpOutput) codeTypes.push('PHP Entity');
+    if (first.xmlOutput) codeTypes.push('XML Mapping');
   }
 
-  // Try to extract from XML mapping
-  if (sharedData.xmlOutput) {
-    codeTypes.push('XML Mapping');
-    const entityMatch = sharedData.xmlOutput.match(/<entity\s+name="([^"]+)"/);
-    if (entityMatch && entityName === 'Entity') {
-      entityName = entityMatch[1];
-    }
-  }
-
-  // Try to extract table name from SQL
   if (sharedData.sqlInput) {
     codeTypes.push('SQL');
-    try {
-      const dialect = sharedData.options?.databaseDialect || DatabaseDialect.MYSQL;
-      const schema = SQLParser.parseCreateTable(sharedData.sqlInput, dialect);
-      tableName = schema.name;
-      if (entityName === 'Entity') {
-        // Use entity name from options or convert table name
-        if (sharedData.options?.entityName) {
-          entityName = sharedData.options.entityName;
-        } else {
-          const prefix = sharedData.options?.entityPrefix || '';
-          const suffix = sharedData.options?.entitySuffix || '';
-          entityName = `${prefix}${toPascalCase(tableName)}${suffix}`;
+    if (entityName === 'Entity' || tableName === 'table') {
+      try {
+        const dialect = sharedData.options?.databaseDialect || DatabaseDialect.MYSQL;
+        const schema = SQLParser.parseCreateTable(sharedData.sqlInput, dialect);
+        tableName = schema.name;
+        if (entityName === 'Entity') {
+          if (sharedData.options?.entityName) {
+            entityName = sharedData.options.entityName;
+          } else {
+            const prefix = sharedData.options?.entityPrefix ?? '';
+            const suffix = sharedData.options?.entitySuffix ?? '';
+            entityName = `${prefix}${toPascalCase(tableName)}${suffix}`;
+          }
+        }
+      } catch {
+        const tableMatch = sharedData.sqlInput.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`?(\w+)`?|(\w+))/i);
+        if (tableMatch) {
+          tableName = tableMatch[1] || tableMatch[2] || 'table';
         }
       }
-    } catch {
-      // If SQL parsing fails, try simple regex
-      const tableMatch = sharedData.sqlInput.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`?(\w+)`?|(\w+))/i);
-      if (tableMatch) {
-        tableName = tableMatch[1] || tableMatch[2] || 'table';
-      }
     }
+  }
+
+  if (sharedData.entities.length > 1) {
+    codeTypes.push(`${sharedData.entities.length} Entities`);
   }
 
   return { entityName, tableName, codeTypes };
@@ -68,19 +61,24 @@ function extractEntityInfo(sharedData: ShareableCode): {
  */
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   const { code } = await params;
-  const sharedData = await getSharedDataServer(code);
+  const result = await getSharedDataServer(code);
 
-  if (!sharedData) {
+  if (!result) {
     return {
       title: 'Shared Code Not Found',
-      description: 'The shared Doctrine entity code could not be found or has expired.',
-      robots: {
-        index: false,
-        follow: false,
-      },
+      description: 'The shared Doctrine entity code could not be found.',
+      robots: { index: false, follow: false },
+    };
+  }
+  if ('expired' in result) {
+    return {
+      title: 'Shared Link Expired',
+      description: 'This share link has expired (15 minutes limit).',
+      robots: { index: false, follow: false },
     };
   }
 
+  const sharedData = result.data;
   const { entityName, tableName, codeTypes } = extractEntityInfo(sharedData);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://entity-generator.vercel.app';
   const shareUrl = `${siteUrl}/share/${code}`;

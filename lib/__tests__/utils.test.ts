@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toPascalCase, toCamelCase } from '../utils';
+import { toPascalCase, toCamelCase, getErrorMessage, computeEntityName } from '../utils';
 
 describe('utils', () => {
   describe('toPascalCase', () => {
@@ -62,6 +62,33 @@ describe('utils', () => {
     it('should convert first letter to lowercase', () => {
       expect(toCamelCase('User')).toBe('user');
       expect(toCamelCase('UserName')).toBe('userName');
+    });
+  });
+
+  describe('getErrorMessage', () => {
+    it('should return message from Error', () => {
+      expect(getErrorMessage(new Error('Something failed'))).toBe('Something failed');
+    });
+
+    it('should return fallback for non-Error', () => {
+      expect(getErrorMessage('oops')).toBe('An error occurred');
+      expect(getErrorMessage(null, 'Custom fallback')).toBe('Custom fallback');
+    });
+  });
+
+  describe('computeEntityName', () => {
+    it('should use entityName when set', () => {
+      expect(computeEntityName({ entityName: 'User', entityPrefix: '', entitySuffix: '' }, 'orders')).toBe('User');
+    });
+
+    it('should use prefix + PascalCase(tableName) + suffix when entityName empty', () => {
+      expect(computeEntityName({ entityName: '', entityPrefix: '', entitySuffix: '' }, 'order_items')).toBe(
+        'OrderItems'
+      );
+      expect(computeEntityName({ entityName: '', entityPrefix: 'App\\', entitySuffix: '' }, 'user')).toBe('App\\User');
+      expect(computeEntityName({ entityName: '', entityPrefix: '', entitySuffix: 'Entity' }, 'user')).toBe(
+        'UserEntity'
+      );
     });
   });
 });
