@@ -2,7 +2,6 @@
 
 import { Relationship, GenerationOptions } from '@/lib/types';
 import { CollapsibleSection } from './ui/collapsible-section';
-import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +13,7 @@ interface RelationshipManagementProps {
   onOptionsChange: (options: GenerationOptions) => void;
 }
 
-export function RelationshipManagement({ 
-  options, 
-  onOptionsChange
-}: RelationshipManagementProps) {
+export function RelationshipManagement({ options, onOptionsChange }: RelationshipManagementProps) {
   const handleAddRelationship = () => {
     const newRelationship: Relationship = {
       id: `relationship-${Date.now()}`,
@@ -29,7 +25,7 @@ export function RelationshipManagement({
       cascade: [],
       mappedBy: '',
       inversedBy: '',
-      orphanRemoval: false
+      orphanRemoval: false,
     };
     const newRelationships = [...(options.relationships || []), newRelationship];
     onOptionsChange({ ...options, relationships: newRelationships });
@@ -42,21 +38,28 @@ export function RelationshipManagement({
 
   const handleRelationshipChange = (relationshipIndex: number, field: keyof Relationship, value: any) => {
     const newRelationships = [...(options.relationships || [])];
-    newRelationships[relationshipIndex] = { ...newRelationships[relationshipIndex], [field]: value };
+    newRelationships[relationshipIndex] = {
+      ...newRelationships[relationshipIndex],
+      [field]: value,
+    };
     onOptionsChange({ ...options, relationships: newRelationships });
   };
 
-  const handleCascadeChange = (relationshipIndex: number, cascadeType: 'persist' | 'remove' | 'merge' | 'detach' | 'refresh', checked: boolean) => {
+  const handleCascadeChange = (
+    relationshipIndex: number,
+    cascadeType: 'persist' | 'remove' | 'merge' | 'detach' | 'refresh',
+    checked: boolean
+  ) => {
     const newRelationships = [...(options.relationships || [])];
     const relationship = newRelationships[relationshipIndex];
-    
+
     if (checked) {
       if (!relationship.cascade) relationship.cascade = [];
       relationship.cascade.push(cascadeType);
     } else {
-      relationship.cascade = relationship.cascade?.filter(c => c !== cascadeType) || [];
+      relationship.cascade = relationship.cascade?.filter((c) => c !== cascadeType) || [];
     }
-    
+
     onOptionsChange({ ...options, relationships: newRelationships });
   };
 
@@ -66,7 +69,7 @@ export function RelationshipManagement({
       <p className="text-sm text-muted-foreground mb-3">
         Define relationships between entities. Configure join columns, cascade operations, and fetch strategies.
       </p>
-      
+
       {/* Add New Relationship Button */}
       <Button
         type="button"
@@ -75,20 +78,18 @@ export function RelationshipManagement({
       >
         Add New Relationship
       </Button>
-      
+
       {/* Relationships List */}
       <div className="space-y-4">
         {(options.relationships || []).map((relationship, relationshipIndex) => (
           <CollapsibleSection
-              key={relationship.id}
-              id={relationship.id}
-              title={relationship.field || `Relationship ${relationshipIndex + 1}`}
-              subtitle={`${relationship.type} → ${relationship.targetEntity}`}
-              onRemove={() => handleRemoveRelationship(relationshipIndex)}
-              showDragHandle={false}
-              showOrderNumber={false}
-
-            >
+            key={relationship.id}
+            title={relationship.field || `Relationship ${relationshipIndex + 1}`}
+            subtitle={`${relationship.type} → ${relationship.targetEntity}`}
+            onRemove={() => handleRemoveRelationship(relationshipIndex)}
+            showDragHandle={false}
+            showOrderNumber={false}
+          >
             {/* Relationship Basic Info */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
               <Input
@@ -127,7 +128,7 @@ export function RelationshipManagement({
                 className="text-sm min-w-0"
               />
             </div>
-            
+
             {/* Advanced Options */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
               <Select
@@ -154,7 +155,7 @@ export function RelationshipManagement({
                 </Label>
               </div>
             </div>
-            
+
             {/* Mapped By / Inversed By */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
               <Input
@@ -172,7 +173,7 @@ export function RelationshipManagement({
                 className="text-sm min-w-0"
               />
             </div>
-            
+
             {/* Cascade Operations */}
             <div className="mb-4">
               <h6 className="font-medium text-foreground mb-2">Cascade Operations</h6>

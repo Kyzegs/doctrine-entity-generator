@@ -4,7 +4,6 @@ import { ReactNode, useState } from 'react';
 import { ChevronDown, ChevronRight, GripVertical, Trash2 } from 'lucide-react';
 
 interface CollapsibleSectionProps {
-  id: string;
   title: string;
   subtitle?: string;
   onRemove?: () => void;
@@ -21,24 +20,23 @@ interface CollapsibleSectionProps {
 }
 
 export function CollapsibleSection({
-  id,
   title,
   subtitle,
   onRemove,
   children,
   showDragHandle = false,
-  showOrderNumber = false,
-  orderNumber,
+  showOrderNumber: _showOrderNumber = false,
+  orderNumber: _orderNumber,
   headerToggle,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd,
-  isDragged = false
+  isDragged = false,
 }: CollapsibleSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   return (
-    <div 
+    <div
       className={`border border-border rounded-lg ${isDragged ? 'opacity-50' : ''}`}
       onDragOver={onDragOver}
       onDrop={onDrop}
@@ -48,7 +46,7 @@ export function CollapsibleSection({
         <div className="flex items-center space-x-3">
           {/* Drag Handle */}
           {showDragHandle && (
-            <div 
+            <div
               className="cursor-move text-muted-foreground hover:text-foreground"
               draggable
               onDragStart={onDragStart}
@@ -57,38 +55,26 @@ export function CollapsibleSection({
               <GripVertical className="w-5 h-5" />
             </div>
           )}
-          
+
           {/* Collapse Button */}
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="text-muted-foreground hover:text-foreground transition-colors duration-200"
           >
-            {isCollapsed ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <ChevronDown className="w-5 h-5" />
-            )}
+            {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
-          
+
           {/* Title */}
           <div>
-            <h5 className="font-medium text-foreground">
-              {title}
-            </h5>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            )}
+            <h5 className="font-medium text-foreground">{title}</h5>
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
         {/* Actions */}
         <div className="flex items-center space-x-2">
           {/* Header Toggle (if provided) */}
-          {headerToggle && (
-            <div className="flex items-center">
-              {headerToggle}
-            </div>
-          )}
+          {headerToggle && <div className="flex items-center">{headerToggle}</div>}
           {onRemove && (
             <button
               type="button"
@@ -100,13 +86,9 @@ export function CollapsibleSection({
           )}
         </div>
       </div>
-      
+
       {/* Content - Collapsible */}
-      {!isCollapsed && (
-        <div className="p-4">
-          {children}
-        </div>
-      )}
+      {!isCollapsed && <div className="p-4">{children}</div>}
     </div>
   );
 }

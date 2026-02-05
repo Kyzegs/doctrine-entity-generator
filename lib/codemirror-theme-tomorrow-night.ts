@@ -10,16 +10,16 @@ import { tags } from '@lezer/highlight';
 const background = '#2d2d2d';
 const highlightBackground = '#363636';
 const selection = '#393939';
-const foreground = '#ccc';           /* code[class*="language-"], pre */
-const comment = '#999';               /* .token.comment, .block-comment */
-const punctuation = '#ccc';           /* .token.punctuation */
-const coral = '#e2777a';              /* .token.tag, .attr-name, .namespace, .deleted */
-const blue = '#6196cc';               /* .token.function-name */
-const orange = '#f08d49';             /* .token.boolean, .number, .function */
-const yellow = '#f8c555';             /* .token.property, .class-name, .constant, .symbol */
-const purple = '#cc99cd';             /* .token.keyword, .builtin, .selector, .atrule */
-const green = '#7ec699';              /* .token.string, .char, .attr-value, .regex, .variable */
-const cyan = '#67cdcc';               /* .token.operator, .entity, .url */
+const foreground = '#ccc'; /* code[class*="language-"], pre */
+const comment = '#999'; /* .token.comment, .block-comment */
+const punctuation = '#ccc'; /* .token.punctuation */
+const coral = '#e2777a'; /* .token.tag, .attr-name, .namespace, .deleted */
+const blue = '#6196cc'; /* .token.function-name */
+const orange = '#f08d49'; /* .token.boolean, .number, .function */
+const yellow = '#f8c555'; /* .token.property, .class-name, .constant, .symbol */
+const purple = '#cc99cd'; /* .token.keyword, .builtin, .selector, .atrule */
+const green = '#7ec699'; /* .token.string, .char, .attr-value, .regex, .variable */
+const cyan = '#67cdcc'; /* .token.operator, .entity, .url */
 const cursor = '#ccc';
 
 const tomorrowNightTheme = EditorView.theme(
@@ -57,7 +57,10 @@ const tomorrowNightHighlightStyle = HighlightStyle.define([
   /* string, char, attr-value, regex, variable -> string, variableName */
   { tag: [tags.string, tags.special(tags.string), tags.regexp], color: green },
   /* function-name -> e.g. definition(name), labelName */
-  { tag: [tags.definition(tags.name), tags.function(tags.variableName), tags.labelName], color: blue },
+  {
+    tag: [tags.definition(tags.name), tags.function(tags.variableName), tags.labelName],
+    color: blue,
+  },
   /* default identifiers (Prism default #ccc); variable -> green #7ec699 */
   { tag: tags.name, color: foreground },
   { tag: tags.variableName, color: green },
@@ -74,7 +77,4 @@ const tomorrowNightHighlightStyle = HighlightStyle.define([
   { tag: tags.invalid, color: coral },
 ]);
 
-export const tomorrowNight = [
-  tomorrowNightTheme,
-  syntaxHighlighting(tomorrowNightHighlightStyle),
-];
+export const tomorrowNight = [tomorrowNightTheme, syntaxHighlighting(tomorrowNightHighlightStyle)];

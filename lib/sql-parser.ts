@@ -4,23 +4,23 @@ import { DatabaseDialect } from './example-queries';
 
 export class SQLParser {
   private static parser = new Parser();
-  
+
   static parseCreateTable(sql: string, dialect: DatabaseDialect = DatabaseDialect.MYSQL): TableSchema {
     try {
       console.log('Dialect:', dialect);
       const parserOptions = {
-        database: dialect
+        database: dialect,
       };
-      
+
       const ast = this.parser.astify(sql, parserOptions);
-      
+
       if (!ast || typeof ast !== 'object') {
         throw new Error('Invalid SQL statement');
       }
 
       // Handle both single object and array of objects
       const createTable = Array.isArray(ast) ? ast[0] : ast;
-      
+
       if (!createTable || createTable.type !== 'create' || (createTable as any).keyword !== 'table') {
         throw new Error('Not a CREATE TABLE statement');
       }
@@ -39,11 +39,11 @@ export class SQLParser {
         engine: tableOptions.engine,
         charset: tableOptions.charset,
         collation: tableOptions.collation,
-        autoIncrement: tableOptions.autoIncrement
+        autoIncrement: tableOptions.autoIncrement,
       };
     } catch (error) {
       console.error('SQL parsing error:', error);
-      
+
       if (error instanceof Error) {
         throw new Error(`SQL parsing error: ${error.message}`);
       }
@@ -59,7 +59,7 @@ export class SQLParser {
     if (typeof columnDef === 'string') {
       return columnDef;
     }
-    
+
     if (columnDef && typeof columnDef === 'object') {
       // Handle node-sql-parser format: {expr: {type: "column_ref", column: "name"}}
       if (columnDef.expr && columnDef.expr.type === 'column_ref' && columnDef.expr.column) {
@@ -74,7 +74,7 @@ export class SQLParser {
         return String(columnDef);
       }
     }
-    
+
     console.warn('Unexpected column name structure:', columnDef);
     return String(columnDef);
   }
@@ -89,7 +89,7 @@ export class SQLParser {
 
   private static extractColumns(createTable: any): TableColumn[] {
     const columns: TableColumn[] = [];
-    
+
     if (!createTable.create_definitions) {
       return columns;
     }
@@ -114,7 +114,7 @@ export class SQLParser {
     // Extract column name using the utility function
     const name = this.extractColumnName(def.column.column);
     const typeInfo = this.parseDataType(def.definition); // Data type info is in def.definition
-    
+
     // Parse column attributes
     const nullable = !this.hasAttribute(def, 'not null');
     const autoIncrement = this.hasAttribute(def, 'auto_increment');
@@ -131,17 +131,21 @@ export class SQLParser {
       autoIncrement,
       unsigned,
       default: defaultValue,
-      collation
+      collation,
     };
   }
 
-  private static parseDataType(dataType: any): { type: string; length?: number; unsigned?: boolean } {
+  private static parseDataType(dataType: any): {
+    type: string;
+    length?: number;
+    unsigned?: boolean;
+  } {
     if (!dataType || !dataType.dataType) {
       return { type: 'unknown', length: undefined, unsigned: undefined };
     }
-    
+
     const type = dataType.dataType.toLowerCase();
-    
+
     // Extract length if present
     let length: number | undefined;
     if (dataType.length) {
@@ -158,18 +162,18 @@ export class SQLParser {
     if (attribute === 'not null') {
       return def.nullable && def.nullable.type === 'not null';
     }
-    
+
     if (attribute === 'auto_increment') {
       return def.auto_increment === 'auto_increment';
     }
-    
+
     if (attribute === 'unsigned') {
       // Check if unsigned is in the definition.suffix array
       if (def.definition && Array.isArray(def.definition.suffix)) {
         return def.definition.suffix.includes('UNSIGNED');
       }
     }
-    
+
     return false;
   }
 
@@ -192,7 +196,7 @@ export class SQLParser {
 
   private static extractIndexes(createTable: any): TableIndex[] {
     const indexes: TableIndex[] = [];
-    
+
     if (!createTable.create_definitions) {
       return indexes;
     }
@@ -223,13 +227,13 @@ export class SQLParser {
       name,
       columns,
       unique,
-      primary
+      primary,
     };
   }
 
   private static extractConstraints(createTable: any): TableConstraint[] {
     const constraints: TableConstraint[] = [];
-    
+
     if (!createTable.create_definitions) {
       return constraints;
     }
@@ -253,32 +257,32 @@ export class SQLParser {
 
     const name = def.constraint;
     const type = def.constraint_type.toUpperCase();
-    
+
     if (type === 'FOREIGN KEY') {
       const columns = def.definition.map((col: any) => col.column);
       const referencedTable = def.reference_definition.table[0].table;
       const referencedColumns = def.reference_definition.definition.map((col: any) => col.column);
-      
+
       return {
         name,
         type: 'FOREIGN KEY',
         columns,
         referencedTable,
-        referencedColumns
+        referencedColumns,
       };
     } else if (type === 'PRIMARY KEY') {
       const columns = def.definition.map((col: any) => col.column);
       return {
         name: name || 'PRIMARY',
         type: 'PRIMARY KEY',
-        columns
+        columns,
       };
     } else if (type === 'UNIQUE') {
       const columns = def.definition.map((col: any) => col.column);
       return {
         name,
         type: 'UNIQUE',
-        columns
+        columns,
       };
     }
 
@@ -292,7 +296,7 @@ export class SQLParser {
     autoIncrement?: number;
   } {
     const options: any = {};
-    
+
     if (createTable.table_options) {
       for (const opt of createTable.table_options) {
         switch (opt.keyword) {

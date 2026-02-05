@@ -10,11 +10,7 @@ import { OptionsForm } from '@/components/options-form';
 import { AppSidebar } from '@/components/app-sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,35 +27,35 @@ const DEFAULT_OPTIONS: GenerationOptions = {
   entitySuffix: '',
   entityName: '', // Manual override for entity name (not shareable)
   databaseDialect: DatabaseDialect.MYSQL,
-  
+
   // ORM mapping settings
   customDataTypes: [
     { name: 'timestamp', phpType: '\\DateTimeImmutable' },
     { name: 'money', phpType: 'Money' },
     { name: 'uuid', phpType: 'string' },
-    { name: 'pin', phpType: 'int' }
+    { name: 'pin', phpType: 'int' },
   ],
   columnFieldMappings: [
     { field: 'createdAt', column: 'created', selectedType: 'timestamp' },
     { field: 'sentAt', column: 'sent', selectedType: 'timestamp' },
     { field: 'receivedAt', column: 'received', selectedType: 'timestamp' },
-    { field: 'deletedAt', column: 'deleted', selectedType: 'timestamp' }
+    { field: 'deletedAt', column: 'deleted', selectedType: 'timestamp' },
   ],
   explicitlyDefineColumns: false,
   useAttributeMapping: false,
-  
+
   // PHP Entity Class settings
   publicProperties: false,
   generateGetters: true,
   generateSetters: true,
   generateFluentSetters: true,
-  
+
   // Relationship settings
   relationships: [],
-  
+
   // Trait settings
   customTraits: [],
-  selectedTraits: []
+  selectedTraits: [],
 };
 
 const CODEMIRROR_SQL_DIALECTS = {
@@ -89,8 +85,8 @@ export default function Home() {
       try {
         const parsedConfig = JSON.parse(saved);
         // Merge shareable config with DEFAULT_OPTIONS (relationships come from defaults)
-        const mergedOptions = { 
-          ...DEFAULT_OPTIONS, 
+        const mergedOptions = {
+          ...DEFAULT_OPTIONS,
           namespace: parsedConfig.namespace ?? DEFAULT_OPTIONS.namespace,
           entityPrefix: parsedConfig.entityPrefix ?? DEFAULT_OPTIONS.entityPrefix,
           entitySuffix: parsedConfig.entitySuffix ?? DEFAULT_OPTIONS.entitySuffix,
@@ -98,10 +94,10 @@ export default function Home() {
           columnFieldMappings: parsedConfig.columnFieldMappings || DEFAULT_OPTIONS.columnFieldMappings,
           explicitlyDefineColumns: parsedConfig.explicitlyDefineColumns ?? DEFAULT_OPTIONS.explicitlyDefineColumns,
           useAttributeMapping: parsedConfig.useAttributeMapping ?? DEFAULT_OPTIONS.useAttributeMapping,
-          customTraits: parsedConfig.customTraits || DEFAULT_OPTIONS.customTraits
+          customTraits: parsedConfig.customTraits || DEFAULT_OPTIONS.customTraits,
         };
         setOptions(mergedOptions);
-      } catch (e) {
+      } catch {
         console.warn('Failed to parse saved config, using defaults');
         setOptions(DEFAULT_OPTIONS);
       }
@@ -112,10 +108,10 @@ export default function Home() {
   }, []);
 
   const updateSqlForDialect = (dialectName: string) => {
-    const example = exampleQueries.find(q => q.name === dialectName);
+    const example = exampleQueries.find((q) => q.name === dialectName);
     if (example) {
       setSqlInput(example.query);
-      setOptions(prev => ({ ...prev, databaseDialect: example.dialect }));
+      setOptions((prev) => ({ ...prev, databaseDialect: example.dialect }));
     }
   };
 
@@ -130,7 +126,7 @@ export default function Home() {
         columnFieldMappings: newOptions.columnFieldMappings,
         explicitlyDefineColumns: newOptions.explicitlyDefineColumns,
         useAttributeMapping: newOptions.useAttributeMapping,
-        customTraits: newOptions.customTraits
+        customTraits: newOptions.customTraits,
       };
       localStorage.setItem('entityGeneratorConfig', JSON.stringify(shareableConfig));
     }
@@ -146,7 +142,7 @@ export default function Home() {
     columnFieldMappings: options.columnFieldMappings,
     explicitlyDefineColumns: options.explicitlyDefineColumns,
     useAttributeMapping: options.useAttributeMapping,
-    customTraits: options.customTraits
+    customTraits: options.customTraits,
   });
 
   const exportToFile = () => {
@@ -154,7 +150,7 @@ export default function Home() {
     const dataStr = JSON.stringify(shareableConfig, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `entity-generator-config-${new Date().toISOString().split('T')[0]}.json`;
@@ -179,7 +175,7 @@ export default function Home() {
   const applyImportedConfig = (configStr: string) => {
     try {
       const importedConfig: ShareableConfiguration = JSON.parse(configStr);
-      
+
       // Validate the imported configuration
       if (!importedConfig.version || !importedConfig.customDataTypes || !importedConfig.customTraits) {
         throw new Error('Invalid configuration file');
@@ -195,12 +191,12 @@ export default function Home() {
         columnFieldMappings: importedConfig.columnFieldMappings,
         explicitlyDefineColumns: importedConfig.explicitlyDefineColumns,
         useAttributeMapping: importedConfig.useAttributeMapping,
-        customTraits: importedConfig.customTraits
+        customTraits: importedConfig.customTraits,
       };
 
       setOptions(newOptions);
       saveOptionsToLocalStorage(newOptions);
-      
+
       alert('Configuration imported successfully!');
     } catch (error) {
       console.error('Failed to import configuration:', error);
@@ -217,7 +213,7 @@ export default function Home() {
       const configStr = e.target?.result as string;
       applyImportedConfig(configStr);
     };
-    
+
     reader.readAsText(file);
     // Reset the input so the same file can be imported again
     event.target.value = '';
@@ -235,13 +231,13 @@ export default function Home() {
 
   const suggestRelationships = (schema: any) => {
     const suggestions: any[] = [];
-    
+
     // Safety check for schema structure
     if (!schema || !schema.columns || !Array.isArray(schema.columns)) {
       console.warn('Invalid schema structure:', schema);
       return suggestions;
     }
-    
+
     // Find columns ending with _id that aren't already configured as relationships
     const idColumns = schema.columns.filter((col: any) => {
       // Add safety checks
@@ -249,24 +245,26 @@ export default function Home() {
         console.warn('Invalid column object:', col);
         return false;
       }
-      
+
       // Extract column name using the utility function
       const columnName = SQLParser.extractColumnName(col.name);
-      
-      return columnName.endsWith('_id') && 
+
+      return (
+        columnName.endsWith('_id') &&
         columnName !== 'id' &&
-        !options.relationships.some(rel => rel.joinColumn === columnName);
+        !options.relationships.some((rel) => rel.joinColumn === columnName)
+      );
     });
-    
+
     for (const column of idColumns) {
       // Extract the actual column name using the utility function
       const columnName = SQLParser.extractColumnName(column.name);
       const baseName = columnName.replace(/_id$/, '');
-      
+
       // Convert snake_case to camelCase for field names and PascalCase for entity names
       const fieldName = toCamelCase(baseName);
       const entityName = toPascalCase(baseName);
-      
+
       suggestions.push({
         column: columnName,
         field: fieldName,
@@ -275,10 +273,10 @@ export default function Home() {
         joinColumn: columnName,
         cascade: ['persist', 'merge'],
         fetch: 'LAZY' as const,
-        isNullable: column.nullable
+        isNullable: column.nullable,
       });
     }
-    
+
     return suggestions;
   };
 
@@ -293,24 +291,24 @@ export default function Home() {
       fetch: suggestion.fetch,
       // Note: The nullability will be determined by the SQL column when generating the entity
     };
-    
+
     const newOptions = {
       ...options,
-      relationships: [...(options.relationships || []), newRelationship]
+      relationships: [...(options.relationships || []), newRelationship],
     };
-    
+
     setOptions(newOptions);
     saveOptionsToLocalStorage(newOptions);
-    
+
     // Remove the suggestion from the list
-    setRelationshipSuggestions(prev => prev.filter(s => s.column !== suggestion.column));
+    setRelationshipSuggestions((prev) => prev.filter((s) => s.column !== suggestion.column));
   };
 
-  const handleShareCode = async (tabId: string) => {
+  const handleShareCode = async (_tabId: string) => {
     try {
       const shareData: ShareableCode = {
         sqlInput: sqlInput,
-        options: options
+        options: options,
       };
 
       // Always include both XML and PHP if they exist
@@ -339,7 +337,7 @@ export default function Home() {
     try {
       // Parse the SQL with the selected database dialect
       const schema = SQLParser.parseCreateTable(sqlInput, options.databaseDialect);
-      
+
       // Check if the SQL is a CREATE TABLE statement
       const trimmedSql = sqlInput.trim().toLowerCase();
       if (!trimmedSql.startsWith('create table')) {
@@ -348,7 +346,7 @@ export default function Home() {
         });
         return;
       }
-      
+
       // Generate relationship suggestions
       try {
         const suggestions = suggestRelationships(schema);
@@ -357,7 +355,7 @@ export default function Home() {
         console.warn('Failed to generate relationship suggestions:', suggestionError);
         setRelationshipSuggestions([]);
       }
-      
+
       // Generate Doctrine XML mapping (only if not using attribute mapping)
       if (!options.useAttributeMapping) {
         const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -366,14 +364,14 @@ export default function Home() {
         setXmlOutput('');
         setActiveTab('php');
       }
-      
+
       // Generate PHP entity class
       const php = PHPEntityGenerator.generate(schema, options);
       setPhpOutput(php);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       console.error('Error generating code:', err);
-      
+
       // Show error toast
       toast.error('Code Generation Failed', {
         description: errorMessage,
@@ -417,177 +415,179 @@ export default function Home() {
           </div>
 
           {/* Hidden file input */}
-          <input
-            id="file-import"
-            type="file"
-            accept=".json"
-            onChange={importFromFile}
-            className="hidden"
-          />
+          <input id="file-import" type="file" accept=".json" onChange={importFromFile} className="hidden" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <Label htmlFor="sql-input" className="block text-sm font-medium">
-                  SQL CREATE TABLE Statement
-                </Label>
-                <Select onValueChange={updateSqlForDialect}>
-                  <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Load example SQL..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {exampleQueries.map((example) => (
-                      <SelectItem key={example.name} value={example.name}>
-                        {example.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div id="sql-input" className="flex w-full min-h-64 resize-y flex-col rounded-md border border-input overflow-hidden [&>div]:min-h-0 [&>div]:flex-1 [&_.cm-editor]:outline-none [&_.cm-editor]:h-full [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto [&_.cm-scroller]:font-mono [&_.cm-scroller]:text-sm [&_.cm-scroller]:min-h-0" style={{ height: '16rem' }}>
-                <CodeMirror
-                  value={sqlInput}
-                  onChange={setSqlInput}
-                  height="100%"
-                  minHeight="16rem"
-                  theme={tomorrowNight}
-                  extensions={sqlEditorExtensions}
-                  placeholder="Paste your CREATE TABLE statement here..."
-                  basicSetup={{ lineNumbers: true, foldGutter: false }}
-                />
-              </div>
-            </div>
-
-            {!isHydrated ? (
-              <div className="space-y-4 p-4 border border-border rounded-lg bg-muted">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-muted-foreground/20 rounded w-1/4 mb-4"></div>
-                  <div className="space-y-3">
-                    <div className="h-10 bg-muted-foreground/20 rounded"></div>
-                    <div className="h-10 bg-muted-foreground/20 rounded"></div>
-                    <div className="h-10 bg-muted-foreground/20 rounded"></div>
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <Label htmlFor="sql-input" className="block text-sm font-medium">
+                    SQL CREATE TABLE Statement
+                  </Label>
+                  <Select onValueChange={updateSqlForDialect}>
+                    <SelectTrigger className="w-[280px]">
+                      <SelectValue placeholder="Load example SQL..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {exampleQueries.map((example) => (
+                        <SelectItem key={example.name} value={example.name}>
+                          {example.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div
+                  id="sql-input"
+                  className="flex w-full min-h-64 resize-y flex-col rounded-md border border-input overflow-hidden [&>div]:min-h-0 [&>div]:flex-1 [&_.cm-editor]:outline-none [&_.cm-editor]:h-full [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto [&_.cm-scroller]:font-mono [&_.cm-scroller]:text-sm [&_.cm-scroller]:min-h-0"
+                  style={{ height: '16rem' }}
+                >
+                  <CodeMirror
+                    value={sqlInput}
+                    onChange={setSqlInput}
+                    height="100%"
+                    minHeight="16rem"
+                    theme={tomorrowNight}
+                    extensions={sqlEditorExtensions}
+                    placeholder="Paste your CREATE TABLE statement here..."
+                    basicSetup={{ lineNumbers: true, foldGutter: false }}
+                  />
                 </div>
               </div>
-            ) : (
-              <OptionsForm 
-                options={options} 
-                onChange={(newOptions) => {
-                  setOptions(newOptions);
-                  saveOptionsToLocalStorage(newOptions);
-                  // Update SQL example when dialect changes
-                  if (newOptions.databaseDialect !== options.databaseDialect) {
-                    updateSqlForDialect(newOptions.databaseDialect);
-                  }
-                }} 
-              />
-            )}
-          </div>
 
-          <div className="space-y-6">
-            {(xmlOutput || phpOutput) && (
-              <TabbedCodeOutput
-                tabs={[
-                  ...(xmlOutput ? [{
-                    id: 'xml',
-                    title: 'Doctrine XML Mapping',
-                    code: xmlOutput,
-                    language: 'xml'
-                  }] : []),
-                  ...(phpOutput ? [{
-                    id: 'php',
-                    title: 'PHP Entity Class',
-                    code: phpOutput,
-                    language: 'php'
-                  }] : [])
-                ]}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                onShare={handleShareCode}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Add padding at bottom to prevent content from being hidden behind fixed footer */}
-        <div className="h-24" />
-      </div>
-
-      {/* Fixed Bottom Container */}
-      <div className="fixed bottom-0 right-0 left-0 md:left-[var(--sidebar-width)] z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="p-4">
-          <div className="flex items-center gap-4">
-            {/* Generate Code Button */}
-            <Button
-              onClick={generateCode}
-              size="lg"
-              className="shrink-0"
-            >
-              Generate Code
-            </Button>
-
-            {/* Relationship Suggestions Popover */}
-            {relationshipSuggestions.length > 0 && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="lg" className="gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                    </span>
-                    Relationship Suggestions
-                    <span className="ml-1 px-1.5 py-0.5 bg-muted text-muted-foreground text-xs rounded-full">
-                      {relationshipSuggestions.length}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-96 p-0" align="start" side="top">
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Suggested Relationships</h4>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRelationshipSuggestions([])}
-                        className="h-8 px-2 text-muted-foreground hover:text-foreground"
-                      >
-                        Dismiss All
-                      </Button>
+              {!isHydrated ? (
+                <div className="space-y-4 p-4 border border-border rounded-lg bg-muted">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-muted-foreground/20 rounded w-1/4 mb-4"></div>
+                    <div className="space-y-3">
+                      <div className="h-10 bg-muted-foreground/20 rounded"></div>
+                      <div className="h-10 bg-muted-foreground/20 rounded"></div>
+                      <div className="h-10 bg-muted-foreground/20 rounded"></div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Fields ending with "_id" detected in your SQL
-                    </p>
                   </div>
-                  <div className="max-h-[400px] overflow-y-auto p-2">
-                    {relationshipSuggestions.map((suggestion, index) => (
-                      <button
-                        key={`suggestion-${suggestion.field}-${index}`}
-                        onClick={() => addSuggestedRelationship(suggestion)}
-                        className="w-full text-left p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">
-                              {suggestion.field} → {suggestion.targetEntity}
+                </div>
+              ) : (
+                <OptionsForm
+                  options={options}
+                  onChange={(newOptions) => {
+                    setOptions(newOptions);
+                    saveOptionsToLocalStorage(newOptions);
+                    // Update SQL example when dialect changes
+                    if (newOptions.databaseDialect !== options.databaseDialect) {
+                      updateSqlForDialect(newOptions.databaseDialect);
+                    }
+                  }}
+                />
+              )}
+            </div>
+
+            <div className="space-y-6">
+              {(xmlOutput || phpOutput) && (
+                <TabbedCodeOutput
+                  tabs={[
+                    ...(xmlOutput
+                      ? [
+                          {
+                            id: 'xml',
+                            title: 'Doctrine XML Mapping',
+                            code: xmlOutput,
+                            language: 'xml',
+                          },
+                        ]
+                      : []),
+                    ...(phpOutput
+                      ? [
+                          {
+                            id: 'php',
+                            title: 'PHP Entity Class',
+                            code: phpOutput,
+                            language: 'php',
+                          },
+                        ]
+                      : []),
+                  ]}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  onShare={handleShareCode}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Add padding at bottom to prevent content from being hidden behind fixed footer */}
+          <div className="h-24" />
+        </div>
+
+        {/* Fixed Bottom Container */}
+        <div className="fixed bottom-0 right-0 left-0 md:left-[var(--sidebar-width)] z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="p-4">
+            <div className="flex items-center gap-4">
+              {/* Generate Code Button */}
+              <Button onClick={generateCode} size="lg" className="shrink-0">
+                Generate Code
+              </Button>
+
+              {/* Relationship Suggestions Popover */}
+              {relationshipSuggestions.length > 0 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="lg" className="gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                      </span>
+                      Relationship Suggestions
+                      <span className="ml-1 px-1.5 py-0.5 bg-muted text-muted-foreground text-xs rounded-full">
+                        {relationshipSuggestions.length}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-96 p-0" align="start" side="top">
+                    <div className="p-4 border-b">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Suggested Relationships</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setRelationshipSuggestions([])}
+                          className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                        >
+                          Dismiss All
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Fields ending with &quot;_id&quot; detected in your SQL
+                      </p>
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto p-2">
+                      {relationshipSuggestions.map((suggestion, index) => (
+                        <button
+                          key={`suggestion-${suggestion.field}-${index}`}
+                          onClick={() => addSuggestedRelationship(suggestion)}
+                          className="w-full text-left p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">
+                                {suggestion.field} → {suggestion.targetEntity}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Column: {suggestion.column} | Type: {suggestion.type}
+                                {suggestion.isNullable && ' | Nullable'}
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Column: {suggestion.column} | Type: {suggestion.type}
-                              {suggestion.isNullable && ' | Nullable'}
-                            </div>
+                            <div className="ml-2 text-xs text-primary">Add →</div>
                           </div>
-                          <div className="ml-2 text-xs text-primary">Add →</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </SidebarInset>
+      </SidebarInset>
     </>
   );
 }

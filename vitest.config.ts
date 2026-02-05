@@ -9,19 +9,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        '**/__tests__/**',
-        '**/*.test.ts',
-        '**/*.config.*',
-        '**/dist/**',
-        '**/.next/**'
-      ]
-    }
+      exclude: ['node_modules/', '**/__tests__/**', '**/*.test.ts', '**/*.config.*', '**/dist/**', '**/.next/**'],
+    },
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './')
-    }
-  }
+      '@': path.resolve(__dirname, './'),
+    },
+  },
 });

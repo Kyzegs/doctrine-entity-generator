@@ -1,10 +1,10 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { GenerationOptions } from './types';
 import { prisma } from './prisma';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 // Share utilities
@@ -32,7 +32,7 @@ export interface ShareDataResponse {
 export async function createShareUrl(data: ShareableCode): Promise<string> {
   const shareData = {
     ...data,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   try {
@@ -49,11 +49,9 @@ export async function createShareUrl(data: ShareableCode): Promise<string> {
     }
 
     const result: ShareResponse = await response.json();
-    
-    const baseUrl = typeof window !== 'undefined' 
-      ? window.location.origin 
-      : '';
-    
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
     return `${baseUrl}/share/${result.code}`;
   } catch (error) {
     console.error('Failed to create share link:', error);
@@ -69,11 +67,11 @@ export async function getSharedDataServer(code: string): Promise<ShareableCode |
     const shareableLink = await prisma.shareableLink.findUnique({
       where: { code },
     });
-    
+
     if (!shareableLink) {
       return null;
     }
-    
+
     // Check if the link has expired
     if (new Date() > shareableLink.expiresAt) {
       // Delete expired link
@@ -82,7 +80,7 @@ export async function getSharedDataServer(code: string): Promise<ShareableCode |
       });
       return null;
     }
-    
+
     return JSON.parse(shareableLink.data) as ShareableCode;
   } catch (error) {
     console.error('Failed to retrieve shared data:', error);
@@ -122,7 +120,7 @@ export async function copyToClipboard(text: string): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.clipboard) {
     throw new Error('Clipboard API not available');
   }
-  
+
   await navigator.clipboard.writeText(text);
 }
 
@@ -131,7 +129,10 @@ export async function copyToClipboard(text: string): Promise<void> {
  * Example: billing_address -> BillingAddress
  */
 export function toPascalCase(str: string): string {
-  return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+  return str
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
 }
 
 /**

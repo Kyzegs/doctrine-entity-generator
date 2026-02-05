@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SQLParser } from '../sql-parser';
 import { DatabaseDialect } from '../example-queries';
-import { TableSchema } from '../types';
 
 describe('SQLParser', () => {
   // Suppress console.log and console.error during tests
@@ -248,7 +247,7 @@ describe('SQLParser', () => {
 
       // Default values might be returned as numbers or strings
       expect(['0', 0]).toContain(schema.columns[0].default);
-      expect(['0.00', 0.00, '0', 0]).toContain(schema.columns[1].default);
+      expect(['0.00', 0.0, '0', 0]).toContain(schema.columns[1].default);
     });
 
     it('should parse default value as NULL', () => {
@@ -408,13 +407,13 @@ describe('SQLParser', () => {
 
       // PRIMARY KEY might be in indexes or constraints depending on parser
       // Some parsers might not extract PRIMARY KEY separately if it's inline
-      const primaryIndex = schema.indexes.find(idx => idx.primary);
-      const primaryConstraint = schema.constraints.find(c => c.type === 'PRIMARY KEY');
-      
+      const primaryIndex = schema.indexes.find((idx) => idx.primary);
+      const primaryConstraint = schema.constraints.find((c) => c.type === 'PRIMARY KEY');
+
       // Note: PRIMARY KEY might not be extracted separately by the parser
       // The column with AUTO_INCREMENT is the important part
       expect(schema.columns[0].autoIncrement).toBe(true);
-      
+
       // If extracted, verify it's correct
       if (primaryIndex || primaryConstraint) {
         const primary = primaryIndex || primaryConstraint;
@@ -433,14 +432,14 @@ describe('SQLParser', () => {
 
       // UNIQUE KEY might be in indexes or constraints depending on parser
       // Some parsers might parse UNIQUE KEY as a regular index
-      const uniqueIndex = schema.indexes.find(idx => idx.name === 'uniq_email');
-      const uniqueConstraint = schema.constraints.find(c => c.name === 'uniq_email' || c.type === 'UNIQUE');
-      
+      const uniqueIndex = schema.indexes.find((idx) => idx.name === 'uniq_email');
+      const uniqueConstraint = schema.constraints.find((c) => c.name === 'uniq_email' || c.type === 'UNIQUE');
+
       // UNIQUE KEY might be parsed as a regular index without unique flag
       // or as a constraint, or might not be extracted separately
       // The important thing is the table parses successfully
       expect(schema.columns).toHaveLength(2);
-      
+
       // If extracted, verify it exists
       if (uniqueIndex || uniqueConstraint) {
         expect(uniqueIndex || uniqueConstraint).toBeDefined();
@@ -457,7 +456,7 @@ describe('SQLParser', () => {
       const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
 
       expect(schema.indexes.length).toBeGreaterThan(0);
-      const fulltextIndex = schema.indexes.find(idx => idx.name === 'ft_content');
+      const fulltextIndex = schema.indexes.find((idx) => idx.name === 'ft_content');
       expect(fulltextIndex).toBeDefined();
     });
 
@@ -516,7 +515,7 @@ describe('SQLParser', () => {
       const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
 
       // Referenced table might include schema or not depending on parser
-      const fkConstraint = schema.constraints.find(c => c.type === 'FOREIGN KEY');
+      const fkConstraint = schema.constraints.find((c) => c.type === 'FOREIGN KEY');
       expect(fkConstraint?.referencedTable).toBeDefined();
       if (fkConstraint?.referencedTable) {
         expect(fkConstraint.referencedTable).toMatch(/users|ecommerce\.users/);
@@ -578,9 +577,9 @@ describe('SQLParser', () => {
       const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
 
       expect(schema.constraints).toHaveLength(3);
-      expect(schema.constraints.some(c => c.type === 'PRIMARY KEY')).toBe(true);
-      expect(schema.constraints.some(c => c.type === 'UNIQUE')).toBe(true);
-      expect(schema.constraints.some(c => c.type === 'FOREIGN KEY')).toBe(true);
+      expect(schema.constraints.some((c) => c.type === 'PRIMARY KEY')).toBe(true);
+      expect(schema.constraints.some((c) => c.type === 'UNIQUE')).toBe(true);
+      expect(schema.constraints.some((c) => c.type === 'FOREIGN KEY')).toBe(true);
     });
 
     it('should handle table without constraints', () => {
@@ -705,8 +704,8 @@ describe('SQLParser', () => {
       const columnDef = {
         expr: {
           type: 'column_ref',
-          column: 'user_name'
-        }
+          column: 'user_name',
+        },
       };
       const result = SQLParser.extractColumnName(columnDef);
       expect(result).toBe('user_name');
@@ -715,8 +714,8 @@ describe('SQLParser', () => {
     it('should extract column name from object with expr.value', () => {
       const columnDef = {
         expr: {
-          value: 'column_name'
-        }
+          value: 'column_name',
+        },
       };
       const result = SQLParser.extractColumnName(columnDef);
       expect(result).toBe('column_name');
@@ -724,7 +723,7 @@ describe('SQLParser', () => {
 
     it('should extract column name from object with column property', () => {
       const columnDef = {
-        column: 'column_name'
+        column: 'column_name',
       };
       const result = SQLParser.extractColumnName(columnDef);
       expect(result).toBe('column_name');
@@ -739,7 +738,7 @@ describe('SQLParser', () => {
     it('should handle null/undefined by converting to string', () => {
       const result1 = SQLParser.extractColumnName(null as any);
       const result2 = SQLParser.extractColumnName(undefined as any);
-      
+
       expect(result1).toBe('null');
       expect(result2).toBe('undefined');
     });
@@ -769,7 +768,7 @@ describe('SQLParser', () => {
       expect(schema.columns[0].autoIncrement).toBe(true);
       expect(schema.columns[3].default).toBe('pending');
       // Default might be number or string
-      expect(['0.00', 0.00, '0', 0]).toContain(schema.columns[4].default);
+      expect(['0.00', 0.0, '0', 0]).toContain(schema.columns[4].default);
       expect(schema.indexes.length + schema.constraints.length).toBeGreaterThan(0);
       expect(schema.engine?.toLowerCase()).toBe('innodb');
       expect(schema.charset).toBeDefined();

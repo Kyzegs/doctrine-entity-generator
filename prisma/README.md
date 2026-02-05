@@ -15,17 +15,20 @@ The database has one table: `ShareableLink`
 ## Automatic Cleanup
 
 Expired links are automatically deleted when:
+
 1. Someone tries to access an expired link
 2. The cleanup cron job runs (via `/api/share/cleanup`)
 
 ## Development
 
 To reset the database:
+
 ```bash
 npx prisma migrate reset
 ```
 
 To view the database:
+
 ```bash
 npx prisma studio
 ```

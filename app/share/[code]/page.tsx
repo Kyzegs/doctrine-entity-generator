@@ -7,7 +7,11 @@ import { SharedCodeClient } from './shared-code-client';
 /**
  * Extract entity name from shared data
  */
-function extractEntityInfo(sharedData: ShareableCode): { entityName: string; tableName: string; codeTypes: string[] } {
+function extractEntityInfo(sharedData: ShareableCode): {
+  entityName: string;
+  tableName: string;
+  codeTypes: string[];
+} {
   let entityName = 'Entity';
   let tableName = 'table';
   const codeTypes: string[] = [];
@@ -47,7 +51,7 @@ function extractEntityInfo(sharedData: ShareableCode): { entityName: string; tab
           entityName = `${prefix}${toPascalCase(tableName)}${suffix}`;
         }
       }
-    } catch (e) {
+    } catch {
       // If SQL parsing fails, try simple regex
       const tableMatch = sharedData.sqlInput.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`?(\w+)`?|(\w+))/i);
       if (tableMatch) {
@@ -86,15 +90,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   return {
     title: `Shared: ${entityName}`,
     description,
-    keywords: [
-      'doctrine',
-      'doctrine orm',
-      'php entity',
-      'shared code',
-      entityName,
-      tableName,
-      ...codeTypes,
-    ],
+    keywords: ['doctrine', 'doctrine orm', 'php entity', 'shared code', entityName, tableName, ...codeTypes],
     authors: [{ name: 'Sebastiaan "Kyzegs" Zegers' }],
     creator: 'Sebastiaan "Kyzegs" Zegers',
     openGraph: {

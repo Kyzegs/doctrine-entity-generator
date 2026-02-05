@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   Save,
   FolderOpen,
@@ -13,7 +13,7 @@ import {
   Trash2,
   Code2,
   Edit,
-} from "lucide-react";
+} from 'lucide-react';
 
 import {
   Sidebar,
@@ -29,13 +29,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
-  SidebarMenuAction,
-} from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -43,14 +38,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Preset, GenerationOptions, ShareableConfiguration } from "@/lib/types";
-import { useVersion } from "@/hooks/use-version";
-import { toast } from "sonner";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Preset, GenerationOptions } from '@/lib/types';
+import { useVersion } from '@/hooks/use-version';
+import { toast } from 'sonner';
 
 interface AppSidebarProps {
   currentOptions: GenerationOptions;
@@ -103,7 +98,7 @@ export function AppSidebar({
       description: newPresetDescription.trim() || undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      options: { ...currentOptions }
+      options: { ...currentOptions },
     };
 
     const updatedPresets = [...presets, newPreset];
@@ -121,8 +116,8 @@ export function AppSidebar({
   };
 
   const handleDeletePreset = (presetId: string) => {
-    const preset = presets.find(p => p.id === presetId);
-    const updatedPresets = presets.filter(p => p.id !== presetId);
+    const preset = presets.find((p) => p.id === presetId);
+    const updatedPresets = presets.filter((p) => p.id !== presetId);
     savePresetsToStorage(updatedPresets);
 
     if (preset) {
@@ -136,7 +131,7 @@ export function AppSidebar({
   };
 
   const handleEditPreset = (presetId: string) => {
-    const preset = presets.find(p => p.id === presetId);
+    const preset = presets.find((p) => p.id === presetId);
     if (preset) {
       setPresetToEdit(presetId);
       setEditPresetName(preset.name);
@@ -151,7 +146,7 @@ export function AppSidebar({
       return;
     }
 
-    const presetIndex = presets.findIndex(p => p.id === presetToEdit);
+    const presetIndex = presets.findIndex((p) => p.id === presetToEdit);
     if (presetIndex === -1) return;
 
     const updatedPresets = [...presets];
@@ -159,12 +154,12 @@ export function AppSidebar({
       ...updatedPresets[presetIndex],
       name: editPresetName.trim(),
       description: editPresetDescription.trim() || undefined,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     savePresetsToStorage(updatedPresets);
     toast.success(`Preset "${editPresetName}" updated`);
-    
+
     setEditPresetName('');
     setEditPresetDescription('');
     setPresetToEdit(null);
@@ -174,7 +169,7 @@ export function AppSidebar({
   const confirmUpdatePreset = () => {
     if (!presetToUpdate) return;
 
-    const presetIndex = presets.findIndex(p => p.id === presetToUpdate);
+    const presetIndex = presets.findIndex((p) => p.id === presetToUpdate);
     if (presetIndex === -1) return;
 
     // Save the old preset for undo
@@ -185,11 +180,11 @@ export function AppSidebar({
     updatedPresets[presetIndex] = {
       ...updatedPresets[presetIndex],
       options: { ...currentOptions },
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     savePresetsToStorage(updatedPresets);
-    
+
     // Show toast with undo action
     toast.success(`Preset "${presetName}" updated`, {
       action: {
@@ -197,14 +192,14 @@ export function AppSidebar({
         onClick: () => {
           // Restore the old preset
           const revertPresets = [...presets];
-          const currentIndex = revertPresets.findIndex(p => p.id === presetToUpdate);
+          const currentIndex = revertPresets.findIndex((p) => p.id === presetToUpdate);
           if (currentIndex !== -1) {
             revertPresets[currentIndex] = oldPreset;
             savePresetsToStorage(revertPresets);
             toast.success(`Reverted "${presetName}" to previous version`);
           }
-        }
-      }
+        },
+      },
     });
 
     setIsConfirmDialogOpen(false);
@@ -381,7 +376,6 @@ export function AppSidebar({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-
         </SidebarContent>
 
         <SidebarFooter className="border-t border-sidebar-border">
@@ -431,9 +425,7 @@ export function AppSidebar({
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreatePreset}>
-              Create Preset
-            </Button>
+            <Button onClick={handleCreatePreset}>Create Preset</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -444,20 +436,21 @@ export function AppSidebar({
           <DialogHeader>
             <DialogTitle>Confirm Overwrite</DialogTitle>
             <DialogDescription>
-              Are you sure you want to overwrite this preset with your current settings? 
-              This action can be undone using the undo button in the notification.
+              Are you sure you want to overwrite this preset with your current settings? This action can be undone using
+              the undo button in the notification.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsConfirmDialogOpen(false);
-              setPresetToUpdate(null);
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsConfirmDialogOpen(false);
+                setPresetToUpdate(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={confirmUpdatePreset}>
-              Overwrite Preset
-            </Button>
+            <Button onClick={confirmUpdatePreset}>Overwrite Preset</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -467,9 +460,7 @@ export function AppSidebar({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Preset</DialogTitle>
-            <DialogDescription>
-              Update the name and description of this preset.
-            </DialogDescription>
+            <DialogDescription>Update the name and description of this preset.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -498,21 +489,21 @@ export function AppSidebar({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsEditDialogOpen(false);
-              setPresetToEdit(null);
-              setEditPresetName('');
-              setEditPresetDescription('');
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setPresetToEdit(null);
+                setEditPresetName('');
+                setEditPresetDescription('');
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveEditPreset}>
-              Save Changes
-            </Button>
+            <Button onClick={handleSaveEditPreset}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
   );
 }
-

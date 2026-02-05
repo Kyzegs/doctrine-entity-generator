@@ -6,14 +6,14 @@ import { nanoid } from 'nanoid';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Generate a short, unique code
     const code = nanoid(10);
-    
+
     // Set expiration to 15 minutes from now
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 15);
-    
+
     // Create the shareable link in the database
     const shareableLink = await prisma.shareableLink.create({
       data: {
@@ -22,16 +22,13 @@ export async function POST(request: NextRequest) {
         expiresAt,
       },
     });
-    
+
     return NextResponse.json({
       code: shareableLink.code,
       expiresAt: shareableLink.expiresAt,
     });
   } catch (error) {
     console.error('Failed to create shareable link:', error);
-    return NextResponse.json(
-      { error: 'Failed to create shareable link' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create shareable link' }, { status: 500 });
   }
 }

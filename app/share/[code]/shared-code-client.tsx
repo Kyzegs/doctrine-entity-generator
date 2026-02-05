@@ -32,11 +32,12 @@ export function SharedCodeClient() {
         console.error('Failed to load shared data:', err);
         const errorMessage = err instanceof Error ? err.message : 'Invalid or corrupted share link';
         setError(errorMessage);
-        
+
         toast.error('Failed to load shared code', {
-          description: errorMessage === 'Link has expired' 
-            ? 'This share link has expired (15 minutes limit).' 
-            : 'The share link appears to be invalid or corrupted.',
+          description:
+            errorMessage === 'Link has expired'
+              ? 'This share link has expired (15 minutes limit).'
+              : 'The share link appears to be invalid or corrupted.',
         });
       } finally {
         setLoading(false);
@@ -69,9 +70,7 @@ export function SharedCodeClient() {
             <Code2 className="h-8 w-8" />
           </div>
           <h1 className="text-2xl font-bold mb-2">Unable to Load Shared Code</h1>
-          <p className="text-muted-foreground mb-6">
-            {error || 'The share link appears to be invalid or corrupted.'}
-          </p>
+          <p className="text-muted-foreground mb-6">{error || 'The share link appears to be invalid or corrupted.'}</p>
           <Button onClick={handleBackToGenerator} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Go to Generator
@@ -82,35 +81,42 @@ export function SharedCodeClient() {
   }
 
   const tabs = [
-    ...(sharedData.xmlOutput ? [{
-      id: 'xml',
-      title: 'Doctrine XML Mapping',
-      code: sharedData.xmlOutput,
-      language: 'xml'
-    }] : []),
-    ...(sharedData.phpOutput ? [{
-      id: 'php',
-      title: 'PHP Entity Class',
-      code: sharedData.phpOutput,
-      language: 'php'
-    }] : []),
-    ...(sharedData.sqlInput ? [{
-      id: 'sql',
-      title: 'Original SQL',
-      code: sharedData.sqlInput,
-      language: 'sql'
-    }] : [])
+    ...(sharedData.xmlOutput
+      ? [
+          {
+            id: 'xml',
+            title: 'Doctrine XML Mapping',
+            code: sharedData.xmlOutput,
+            language: 'xml',
+          },
+        ]
+      : []),
+    ...(sharedData.phpOutput
+      ? [
+          {
+            id: 'php',
+            title: 'PHP Entity Class',
+            code: sharedData.phpOutput,
+            language: 'php',
+          },
+        ]
+      : []),
+    ...(sharedData.sqlInput
+      ? [
+          {
+            id: 'sql',
+            title: 'Original SQL',
+            code: sharedData.sqlInput,
+            language: 'sql',
+          },
+        ]
+      : []),
   ];
 
   return (
     <div className="w-full min-h-screen bg-background">
       <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4 w-full">
-        <Button
-          onClick={handleBackToGenerator}
-          variant="ghost"
-          size="sm"
-          className="gap-2"
-        >
+        <Button onClick={handleBackToGenerator} variant="ghost" size="sm" className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back to Generator
         </Button>
@@ -127,28 +133,24 @@ export function SharedCodeClient() {
             <h2 className="font-medium text-sm text-muted-foreground mb-2">Shared Information</h2>
             <div className="text-sm space-y-1">
               {sharedData.timestamp && (
-                <p className="text-muted-foreground">
-                  Shared on: {new Date(sharedData.timestamp).toLocaleString()}
-                </p>
+                <p className="text-muted-foreground">Shared on: {new Date(sharedData.timestamp).toLocaleString()}</p>
               )}
               <p className="text-muted-foreground">
-                Contains: {[
+                Contains:{' '}
+                {[
                   sharedData.xmlOutput && 'XML Mapping',
                   sharedData.phpOutput && 'PHP Entity',
-                  sharedData.sqlInput && 'Original SQL'
-                ].filter(Boolean).join(', ')}
+                  sharedData.sqlInput && 'Original SQL',
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
               </p>
             </div>
           </div>
         </div>
 
         {tabs.length > 0 ? (
-          <TabbedCodeOutput 
-            tabs={tabs} 
-            hideShareButton={true}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+          <TabbedCodeOutput tabs={tabs} hideShareButton={true} activeTab={activeTab} onTabChange={setActiveTab} />
         ) : (
           <div className="text-center p-12 bg-card border border-border rounded-lg">
             <Code2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -159,4 +161,3 @@ export function SharedCodeClient() {
     </div>
   );
 }
-

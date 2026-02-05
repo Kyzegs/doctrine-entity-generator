@@ -1,5 +1,5 @@
 import { TableSchema, TableColumn, GenerationOptions } from './types';
-import { toPascalCase, toCamelCase } from './utils';
+import { toCamelCase } from './utils';
 
 export interface ORMFieldMapping {
   name: string;
@@ -23,52 +23,55 @@ export class ORMMappingUtils {
    * Creates a complete ORM mapping from the schema and options
    * This is shared between Doctrine XML generator and PHP entity generator
    */
-  static createORMMapping(schema: TableSchema, options: GenerationOptions): {
+  static createORMMapping(
+    schema: TableSchema,
+    options: GenerationOptions
+  ): {
     fields: ORMFieldMapping[];
     relationships: any[];
   } {
     const fields: ORMFieldMapping[] = [];
-    
+
     // Process all columns to create field mappings, maintaining original order
     for (const column of schema.columns) {
       // Skip ID columns for regular field mapping - they're handled separately in Doctrine XML
       if (column.name === 'id' || column.autoIncrement) {
         continue;
       }
-      
+
       // Determine field name - use custom mapping if available, otherwise convert from column name
       let fieldName = this.getFieldName(column.name, options);
-      
+
       // Check if there's a custom mapping that defines a different field name
-      const fieldMapping = options.columnFieldMappings.find(mapping => mapping.column === column.name);
+      const fieldMapping = options.columnFieldMappings.find((mapping) => mapping.column === column.name);
       if (fieldMapping && fieldMapping.field) {
         fieldName = fieldMapping.field;
       }
       const isRelationship = column.name.endsWith('_id') && this.isConfiguredAsRelationship(column.name, options);
-      
+
       if (isRelationship) {
         // This is a relationship column, add it to relationships array instead of fields
-        const relationship = options.relationships?.find(r => r.joinColumn === column.name);
+        const relationship = options.relationships?.find((r) => r.joinColumn === column.name);
         if (relationship) {
           // Don't add to fields array - relationships are handled separately
         }
         continue;
       }
-      
+
       const isTimestamp = false; // No more hardcoded timestamp detection
       const isByField = false; // No more hardcoded _by detection
-      
+
       // Get custom mapping for this field - first try by field name, then by column name
-      let customMapping = options.columnFieldMappings.find(mapping => mapping.field === fieldName);
+      let customMapping = options.columnFieldMappings.find((mapping) => mapping.field === fieldName);
       if (!customMapping && column.name) {
         // Also check if there's a mapping where the column matches
-        customMapping = options.columnFieldMappings.find(mapping => mapping.column === column.name);
+        customMapping = options.columnFieldMappings.find((mapping) => mapping.column === column.name);
       }
-      
+
       // Determine Doctrine type
       let doctrineType = this.mapToDoctrineType(column);
       if (customMapping?.selectedType) {
-        const customDataType = options.customDataTypes.find(dt => dt.name === customMapping.selectedType);
+        const customDataType = options.customDataTypes.find((dt) => dt.name === customMapping.selectedType);
         if (customDataType) {
           doctrineType = customDataType.name;
         } else {
@@ -76,28 +79,28 @@ export class ORMMappingUtils {
         }
       } else {
         // Check if there's a custom data type that matches the field name
-        const customDataType = options.customDataTypes.find(dt => dt.name === fieldName);
+        const customDataType = options.customDataTypes.find((dt) => dt.name === fieldName);
         if (customDataType) {
           doctrineType = customDataType.name;
         }
       }
-      
+
       // Determine PHP type
       let phpType = this.mapToPHPType(column, options);
       if (customMapping?.selectedType) {
-        const customDataType = options.customDataTypes.find(dt => dt.name === customMapping.selectedType);
+        const customDataType = options.customDataTypes.find((dt) => dt.name === customMapping.selectedType);
         if (customDataType) {
           phpType = customDataType.phpType;
         } else {
           phpType = this.mapDoctrineTypeToPHP(customMapping.selectedType);
         }
       }
-      
+
       // Override with enum class if specified
       if (customMapping?.enumClass) {
         phpType = customMapping.enumClass;
       }
-      
+
       fields.push({
         name: fieldName,
         columnName: column.name,
@@ -111,25 +114,25 @@ export class ORMMappingUtils {
         isByField,
         isRelationship: false,
         unsigned: column.unsigned,
-        default: column.default
+        default: column.default,
       });
     }
-    
+
     // Get relationships in the same order as they appear in the columns
     const orderedRelationships: any[] = [];
     for (const column of schema.columns) {
       if (column.name === 'id' || column.autoIncrement) {
         continue;
       }
-      
+
       if (column.name.endsWith('_id') && this.isConfiguredAsRelationship(column.name, options)) {
-        const relationship = options.relationships?.find(r => r.joinColumn === column.name);
+        const relationship = options.relationships?.find((r) => r.joinColumn === column.name);
         if (relationship) {
           orderedRelationships.push(relationship);
         }
       }
     }
-    
+
     return { fields, relationships: orderedRelationships };
   }
 
@@ -137,7 +140,7 @@ export class ORMMappingUtils {
    * Gets the field name for a column, respecting custom mappings
    */
   static getFieldName(columnName: string, options: GenerationOptions): string {
-    const customMapping = options.columnFieldMappings.find(mapping => mapping.column === columnName);
+    const customMapping = options.columnFieldMappings.find((mapping) => mapping.column === columnName);
     if (customMapping) {
       return customMapping.field;
     }
@@ -149,7 +152,7 @@ export class ORMMappingUtils {
    */
   static mapToDoctrineType(column: TableColumn): string {
     const type = column.type.toLowerCase();
-    
+
     switch (type) {
       case 'int':
       case 'integer':
@@ -197,26 +200,26 @@ export class ORMMappingUtils {
    */
   static mapToPHPType(column: TableColumn, options: GenerationOptions): string {
     const fieldName = this.getFieldName(column.name, options);
-    
+
     // Check for custom type mapping first
-    const customMapping = options.columnFieldMappings.find(mapping => mapping.field === fieldName);
+    const customMapping = options.columnFieldMappings.find((mapping) => mapping.field === fieldName);
     if (customMapping?.selectedType) {
-      const customDataType = options.customDataTypes.find(dt => dt.name === customMapping.selectedType);
+      const customDataType = options.customDataTypes.find((dt) => dt.name === customMapping.selectedType);
       if (customDataType) {
         return customDataType.phpType;
       } else {
         return this.mapDoctrineTypeToPHP(customMapping.selectedType);
       }
     }
-    
+
     // Check if there's a custom data type that matches the field name
-    const customDataType = options.customDataTypes.find(dt => dt.name === fieldName);
+    const customDataType = options.customDataTypes.find((dt) => dt.name === fieldName);
     if (customDataType) {
       return customDataType.phpType;
     }
-    
+
     const type = column.type.toLowerCase();
-    
+
     switch (type) {
       case 'int':
       case 'integer':
@@ -280,15 +283,10 @@ export class ORMMappingUtils {
     }
   }
 
-
-
   /**
    * Checks if a column is configured as a relationship
    */
   static isConfiguredAsRelationship(columnName: string, options: GenerationOptions): boolean {
-    return (options.relationships || []).some(relationship => 
-      relationship.joinColumn === columnName
-    );
+    return (options.relationships || []).some((relationship) => relationship.joinColumn === columnName);
   }
-
 }

@@ -19,16 +19,15 @@ interface TraitManagementProps {
   onDragEnd: () => void;
 }
 
-export function TraitManagement({ 
-  options, 
+export function TraitManagement({
+  options,
   onOptionsChange,
   draggedTraitId,
   onDragStart,
   onDragOver,
   onDrop,
-  onDragEnd
+  onDragEnd,
 }: TraitManagementProps) {
-
   const handleAddTrait = () => {
     const newTrait: CustomTrait = {
       id: `trait-${Date.now()}`,
@@ -37,7 +36,7 @@ export function TraitManagement({
       description: '',
       namespace: '',
       properties: [],
-      requiredInterfaces: []
+      requiredInterfaces: [],
     };
     const newTraits = [...(options.customTraits || []), newTrait];
     onOptionsChange({ ...options, customTraits: newTraits });
@@ -56,9 +55,9 @@ export function TraitManagement({
 
   const handlePropertyChange = (traitIndex: number, propIndex: number, field: string, value: any) => {
     const newTraits = [...(options.customTraits || [])];
-    newTraits[traitIndex].properties[propIndex] = { 
-      ...newTraits[traitIndex].properties[propIndex], 
-      [field]: value 
+    newTraits[traitIndex].properties[propIndex] = {
+      ...newTraits[traitIndex].properties[propIndex],
+      [field]: value,
     };
     onOptionsChange({ ...options, customTraits: newTraits });
   };
@@ -72,7 +71,7 @@ export function TraitManagement({
       nullable: false,
       description: '',
       hasGetter: true,
-      hasSetter: true
+      hasSetter: true,
     });
     onOptionsChange({ ...options, customTraits: newTraits });
   };
@@ -106,10 +105,11 @@ export function TraitManagement({
       <div className="mb-6">
         <h4 className="font-medium text-foreground mb-2">Custom Traits Management</h4>
         <p className="text-sm text-muted-foreground">
-          Create and manage custom traits for your entities. Each trait can have properties with getter/setter toggles and required interfaces.
+          Create and manage custom traits for your entities. Each trait can have properties with getter/setter toggles
+          and required interfaces.
         </p>
       </div>
-      
+
       {/* Add New Trait Button */}
       <Button
         type="button"
@@ -118,7 +118,7 @@ export function TraitManagement({
       >
         Add New Trait
       </Button>
-      
+
       {/* Traits List */}
       <div className="space-y-6">
         {(options.customTraits || []).map((trait, traitIndex) => (
@@ -126,8 +126,8 @@ export function TraitManagement({
             {/* Drop zone before each trait */}
             <div
               className={`min-h-2 transition-all duration-200 ${
-                draggedTraitId && draggedTraitId !== trait.id 
-                  ? 'bg-accent border-2 border-dashed border-accent-foreground/20 rounded mb-2' 
+                draggedTraitId && draggedTraitId !== trait.id
+                  ? 'bg-accent border-2 border-dashed border-accent-foreground/20 rounded mb-2'
                   : ''
               }`}
               onDragOver={onDragOver}
@@ -135,7 +135,7 @@ export function TraitManagement({
                 e.preventDefault();
                 if (draggedTraitId) {
                   const traits = [...(options.customTraits || [])];
-                  const draggedIndex = traits.findIndex(t => t.id === draggedTraitId);
+                  const draggedIndex = traits.findIndex((t) => t.id === draggedTraitId);
                   if (draggedIndex !== -1) {
                     const [draggedTrait] = traits.splice(draggedIndex, 1);
                     traits.splice(traitIndex, 0, draggedTrait);
@@ -145,11 +145,10 @@ export function TraitManagement({
                 }
               }}
             />
-            
+
             {/* Trait item */}
             <CollapsibleSection
               key={trait.id}
-              id={trait.id}
               title={trait.name || `Trait ${traitIndex + 1}`}
               subtitle={trait.description}
               onRemove={() => handleRemoveTrait(traitIndex)}
@@ -168,13 +167,13 @@ export function TraitManagement({
                     onCheckedChange={(checked) => {
                       const currentTraits = options.selectedTraits || [];
                       let newTraits: string[];
-                      
+
                       if (checked) {
                         newTraits = [...currentTraits, trait.id];
                       } else {
-                        newTraits = currentTraits.filter(t => t !== trait.id);
+                        newTraits = currentTraits.filter((t) => t !== trait.id);
                       }
-                      
+
                       onOptionsChange({ ...options, selectedTraits: newTraits });
                     }}
                   />
@@ -215,26 +214,22 @@ export function TraitManagement({
                   className="text-sm"
                 />
               </div>
-              
 
-              
               {/* Properties Management */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <h6 className="font-medium text-foreground">Properties</h6>
-                  <Button
-                    type="button"
-                    onClick={() => handleAddProperty(traitIndex)}
-                    variant="outline"
-                    size="sm"
-                  >
+                  <Button type="button" onClick={() => handleAddProperty(traitIndex)} variant="outline" size="sm">
                     Add Property
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3">
                   {trait.properties.map((property, propIndex) => (
-                    <div key={`property-${trait.id}-${propIndex}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-3 p-3 border border-border rounded-lg bg-card items-center">
+                    <div
+                      key={`property-${trait.id}-${propIndex}`}
+                      className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-3 p-3 border border-border rounded-lg bg-card items-center"
+                    >
                       <Input
                         type="text"
                         value={property.name}
@@ -265,21 +260,27 @@ export function TraitManagement({
                       <div className="flex items-center">
                         <Checkbox
                           checked={property.nullable}
-                          onCheckedChange={(checked) => handlePropertyChange(traitIndex, propIndex, 'nullable', checked)}
+                          onCheckedChange={(checked) =>
+                            handlePropertyChange(traitIndex, propIndex, 'nullable', checked)
+                          }
                         />
                         <span className="ml-1 text-xs text-muted-foreground">nullable</span>
                       </div>
                       <div className="flex items-center">
                         <Checkbox
                           checked={property.hasGetter ?? true}
-                          onCheckedChange={(checked) => handlePropertyChange(traitIndex, propIndex, 'hasGetter', checked)}
+                          onCheckedChange={(checked) =>
+                            handlePropertyChange(traitIndex, propIndex, 'hasGetter', checked)
+                          }
                         />
                         <span className="ml-1 text-xs text-muted-foreground">getter</span>
                       </div>
                       <div className="flex items-center">
                         <Checkbox
                           checked={property.hasSetter ?? true}
-                          onCheckedChange={(checked) => handlePropertyChange(traitIndex, propIndex, 'hasSetter', checked)}
+                          onCheckedChange={(checked) =>
+                            handlePropertyChange(traitIndex, propIndex, 'hasSetter', checked)
+                          }
                         />
                         <span className="ml-1 text-xs text-muted-foreground">setter</span>
                       </div>
@@ -297,24 +298,22 @@ export function TraitManagement({
                   ))}
                 </div>
               </div>
-              
+
               {/* Required Interfaces Management */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <h6 className="font-medium text-foreground">Required Interfaces</h6>
-                  <Button
-                    type="button"
-                    onClick={() => handleAddInterface(traitIndex)}
-                    variant="outline"
-                    size="sm"
-                  >
+                  <Button type="button" onClick={() => handleAddInterface(traitIndex)} variant="outline" size="sm">
                     Add Interface
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3">
                   {trait.requiredInterfaces.map((interfaceName, interfaceIndex) => (
-                    <div key={`interface-${trait.id}-${interfaceIndex}`} className="flex items-center space-x-3 p-3 border border-border rounded-lg bg-card">
+                    <div
+                      key={`interface-${trait.id}-${interfaceIndex}`}
+                      className="flex items-center space-x-3 p-3 border border-border rounded-lg bg-card"
+                    >
                       <Input
                         type="text"
                         value={interfaceName}
@@ -339,7 +338,7 @@ export function TraitManagement({
             </CollapsibleSection>
           </div>
         ))}
-        
+
         {/* Final drop zone at the end */}
         <div
           className={`min-h-2 transition-all duration-200 ${
@@ -350,7 +349,7 @@ export function TraitManagement({
             e.preventDefault();
             if (draggedTraitId) {
               const traits = [...(options.customTraits || [])];
-              const draggedIndex = traits.findIndex(t => t.id === draggedTraitId);
+              const draggedIndex = traits.findIndex((t) => t.id === draggedTraitId);
               if (draggedIndex !== -1) {
                 const [draggedTrait] = traits.splice(draggedIndex, 1);
                 traits.push(draggedTrait);

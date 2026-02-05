@@ -2,7 +2,7 @@
 
 import { GenerationOptions, ColumnFieldMapping, CustomDataType, Relationship, CustomTrait } from '@/lib/types';
 import { DatabaseDialect } from '@/lib/example-queries';
-import { useState, memo, useCallback, ChangeEvent } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,84 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TraitManagement } from './trait-management';
 import { RelationshipManagement } from './relationship-management';
 
-// Memoized Basic Settings Section
-const BasicSettings = memo(({ 
-  namespace, 
-  entityPrefix, 
-  entitySuffix, 
-  entityName,
-  onFieldChange 
-}: {
-  namespace: string;
-  entityPrefix: string;
-  entitySuffix: string;
-  entityName: string;
-  onFieldChange: (field: string, value: string) => void;
-}) => {
-  return (
-    <div>
-      <h4 className="font-medium text-foreground mb-3">Basic Settings</h4>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="namespace" className="block text-sm font-medium mb-2">
-            Namespace
-          </Label>
-          <Input
-            id="namespace"
-            type="text"
-            value={namespace}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('namespace', e.target.value)}
-            placeholder="e.g., App\Entity"
-            className="text-sm"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="entityName" className="block text-sm font-medium mb-2">
-            Entity Name Override
-          </Label>
-          <Input
-            id="entityName"
-            type="text"
-            value={entityName}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('entityName', e.target.value)}
-            placeholder="Leave empty to use table name"
-            className="text-sm"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="entityPrefix" className="block text-sm font-medium mb-2">
-            Entity Prefix
-          </Label>
-          <Input
-            id="entityPrefix"
-            type="text"
-            value={entityPrefix}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('entityPrefix', e.target.value)}
-            placeholder="e.g., Base"
-            className="text-sm"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="entitySuffix" className="block text-sm font-medium mb-2">
-            Entity Suffix
-          </Label>
-          <Input
-            id="entitySuffix"
-            type="text"
-            value={entitySuffix}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => onFieldChange('entitySuffix', e.target.value)}
-            placeholder="e.g., Entity"
-            className="text-sm"
-          />
-        </div>
-      </div>
-    </div>
-  );
-});
-
 interface OptionsFormProps {
   options: GenerationOptions;
   onChange: (options: GenerationOptions) => void;
@@ -98,49 +20,55 @@ interface OptionsFormProps {
 function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
   // Initialize all traits as collapsed by default
 
-  
   const [draggedTraitId, setDraggedTraitId] = useState<string | null>(null);
-  
-  const handleInputChange = useCallback((field: keyof GenerationOptions, value: string | boolean | ColumnFieldMapping[] | CustomDataType[] | Relationship[] | string[] | CustomTrait[]) => {
-    onChange({
-      ...options,
-      [field]: value,
-    });
-  }, [options, onChange]);
-  
 
-  
+  const handleInputChange = useCallback(
+    (
+      field: keyof GenerationOptions,
+      value: string | boolean | ColumnFieldMapping[] | CustomDataType[] | Relationship[] | string[] | CustomTrait[]
+    ) => {
+      onChange({
+        ...options,
+        [field]: value,
+      });
+    },
+    [options, onChange]
+  );
+
   const handleDragStart = useCallback((e: React.DragEvent, traitId: string) => {
     setDraggedTraitId(traitId);
     e.dataTransfer.effectAllowed = 'move';
   }, []);
-  
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   }, []);
-  
-  const handleDrop = useCallback((e: React.DragEvent, targetTraitId: string) => {
-    e.preventDefault();
-    
-    if (!draggedTraitId || draggedTraitId === targetTraitId) {
-      return;
-    }
-    
-    const traits = [...(options.customTraits || [])];
-    const draggedIndex = traits.findIndex(t => t.id === draggedTraitId);
-    const targetIndex = traits.findIndex(t => t.id === targetTraitId);
-    
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      const [draggedTrait] = traits.splice(draggedIndex, 1);
-      traits.splice(targetIndex, 0, draggedTrait);
-      
-      handleInputChange('customTraits', traits);
-    }
-    
-    setDraggedTraitId(null);
-  }, [draggedTraitId, options.customTraits, handleInputChange]);
-  
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetTraitId: string) => {
+      e.preventDefault();
+
+      if (!draggedTraitId || draggedTraitId === targetTraitId) {
+        return;
+      }
+
+      const traits = [...(options.customTraits || [])];
+      const draggedIndex = traits.findIndex((t) => t.id === draggedTraitId);
+      const targetIndex = traits.findIndex((t) => t.id === targetTraitId);
+
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        const [draggedTrait] = traits.splice(draggedIndex, 1);
+        traits.splice(targetIndex, 0, draggedTrait);
+
+        handleInputChange('customTraits', traits);
+      }
+
+      setDraggedTraitId(null);
+    },
+    [draggedTraitId, options.customTraits, handleInputChange]
+  );
+
   const handleDragEnd = useCallback(() => {
     setDraggedTraitId(null);
   }, []);
@@ -175,7 +103,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               placeholder="e.g. App\Entity"
             />
           </div>
-          
+
           <div>
             <Label htmlFor="databaseDialect" className="block text-sm font-medium mb-1">
               Database Dialect
@@ -194,7 +122,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div>
             <Label htmlFor="entityPrefix" className="block text-sm font-medium mb-1">
               Entity Prefix
@@ -208,7 +136,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               placeholder=""
             />
           </div>
-          
+
           <div>
             <Label htmlFor="entitySuffix" className="block text-sm font-medium mb-1">
               Entity Suffix
@@ -241,7 +169,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </Label>
             </div>
           </div>
-          
+
           <div>
             <div className="flex items-center">
               <Checkbox
@@ -254,13 +182,16 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </Label>
             </div>
           </div>
-          
+
           {/* Column-Field Mappings */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Column-Field Mappings</label>
             <div className="space-y-2">
               {options.columnFieldMappings.map((mapping, index) => (
-                <div key={`mapping-${index}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
+                <div
+                  key={`mapping-${index}`}
+                  className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center"
+                >
                   <Input
                     type="text"
                     value={mapping.field}
@@ -284,10 +215,10 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
                     className="text-sm min-w-0"
                   />
                   <Select
-                    value={mapping.selectedType || "default"}
+                    value={mapping.selectedType || 'default'}
                     onValueChange={(value) => {
                       const newMappings = [...options.columnFieldMappings];
-                      newMappings[index].selectedType = value === "default" ? "" : value;
+                      newMappings[index].selectedType = value === 'default' ? '' : value;
                       handleInputChange('columnFieldMappings', newMappings);
                     }}
                   >
@@ -346,7 +277,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
                   const newMapping: ColumnFieldMapping = {
                     field: '',
                     column: '',
-                    selectedType: ''
+                    selectedType: '',
                   };
                   const newMappings = [...options.columnFieldMappings, newMapping];
                   handleInputChange('columnFieldMappings', newMappings);
@@ -357,13 +288,16 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </Button>
             </div>
           </div>
-          
+
           {/* Custom Data Types */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Custom Data Types</label>
             <div className="space-y-2">
               {options.customDataTypes.map((dataType, index) => (
-                <div key={`datatype-${index}`} className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <div
+                  key={`datatype-${index}`}
+                  className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-2 items-center"
+                >
                   <Input
                     type="text"
                     value={dataType.name}
@@ -406,7 +340,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
                 onClick={() => {
                   const newDataType: CustomDataType = {
                     name: '',
-                    phpType: ''
+                    phpType: '',
                   };
                   const newDataTypes = [...options.customDataTypes, newDataType];
                   handleInputChange('customDataTypes', newDataTypes);
@@ -436,7 +370,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </Label>
             </div>
           </div>
-          
+
           <div>
             <div className="flex items-center">
               <Checkbox
@@ -449,7 +383,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </Label>
             </div>
           </div>
-          
+
           <div>
             <div className="flex items-center">
               <Checkbox
@@ -462,7 +396,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
               </Label>
             </div>
           </div>
-          
+
           <div>
             <div className="flex items-center">
               <Checkbox
@@ -480,10 +414,7 @@ function OptionsFormComponent({ options, onChange }: OptionsFormProps) {
       </div>
 
       {/* Relationships Management */}
-      <RelationshipManagement
-        options={options}
-        onOptionsChange={(newOptions) => onChange(newOptions)}
-      />
+      <RelationshipManagement options={options} onOptionsChange={(newOptions) => onChange(newOptions)} />
 
       {/* Custom Traits Management */}
       <TraitManagement
@@ -506,7 +437,7 @@ function arePropsEqual(prevProps: OptionsFormProps, nextProps: OptionsFormProps)
   if (prevProps.onChange !== nextProps.onChange) {
     return false;
   }
-  
+
   // Deep comparison of options object
   return JSON.stringify(prevProps.options) === JSON.stringify(nextProps.options);
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DoctrineXMLGenerator } from '../doctrine-xml-generator';
-import { TableSchema, TableColumn, GenerationOptions, Relationship } from '../types';
+import { TableSchema, GenerationOptions } from '../types';
 import { DatabaseDialect } from '../example-queries';
 
 describe('DoctrineXMLGenerator', () => {
@@ -20,7 +20,7 @@ describe('DoctrineXMLGenerator', () => {
     generateFluentSetters: true,
     relationships: [],
     customTraits: [],
-    selectedTraits: []
+    selectedTraits: [],
   };
 
   const createSchema = (overrides: Partial<TableSchema> = {}): TableSchema => ({
@@ -28,15 +28,13 @@ describe('DoctrineXMLGenerator', () => {
     columns: [],
     indexes: [],
     constraints: [],
-    ...overrides
+    ...overrides,
   });
 
   describe('generate', () => {
     it('should generate basic XML structure with namespaces', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -49,9 +47,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should generate entity with namespace', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -62,9 +58,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should generate entity without namespace when empty', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, namespace: '' };
@@ -76,9 +70,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should use custom entity name when provided', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, entityName: 'CustomEntity' };
@@ -89,15 +81,13 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should apply entity prefix and suffix', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = {
         ...defaultOptions,
         entityPrefix: 'Base',
-        entitySuffix: 'Model'
+        entitySuffix: 'Model',
       };
       const xml = DoctrineXMLGenerator.generate(schema, options);
 
@@ -106,16 +96,14 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should apply prefix, suffix, and custom name together', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = {
         ...defaultOptions,
         entityPrefix: 'Base',
         entitySuffix: 'Model',
-        entityName: 'User'
+        entityName: 'User',
       };
       const xml = DoctrineXMLGenerator.generate(schema, options);
 
@@ -126,9 +114,7 @@ describe('DoctrineXMLGenerator', () => {
   describe('ID field generation', () => {
     it('should generate ID field with generator', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -140,9 +126,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should generate ID field with unsigned option for MySQL', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'bigint', nullable: false, autoIncrement: true, unsigned: true }
-        ]
+        columns: [{ name: 'id', type: 'bigint', nullable: false, autoIncrement: true, unsigned: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -155,9 +139,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should not generate unsigned option for non-MySQL databases', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'bigint', nullable: false, autoIncrement: true, unsigned: true }
-        ]
+        columns: [{ name: 'id', type: 'bigint', nullable: false, autoIncrement: true, unsigned: true }],
       });
 
       const options = { ...defaultOptions, databaseDialect: DatabaseDialect.POSTGRESQL };
@@ -169,9 +151,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should generate ID field with default value option', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true, default: '1' }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true, default: '1' }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -183,8 +163,15 @@ describe('DoctrineXMLGenerator', () => {
     it('should generate ID field with both unsigned and default options', () => {
       const schema = createSchema({
         columns: [
-          { name: 'id', type: 'bigint', nullable: false, autoIncrement: true, unsigned: true, default: '0' }
-        ]
+          {
+            name: 'id',
+            type: 'bigint',
+            nullable: false,
+            autoIncrement: true,
+            unsigned: true,
+            default: '0',
+          },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -196,9 +183,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should not generate options element when not needed', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -209,9 +194,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should not include default option when value is NULL', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true, default: 'NULL' }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true, default: 'NULL' }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -221,9 +204,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should find ID column by autoIncrement flag', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'primary_key', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'primary_key', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -237,8 +218,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -250,8 +231,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'email', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'email', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -263,8 +244,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'age', type: 'int', length: 11, nullable: true }
-        ]
+          { name: 'age', type: 'int', length: 11, nullable: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -276,8 +257,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -291,8 +272,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'description', type: 'text', nullable: true, unsigned: true }
-        ]
+          { name: 'description', type: 'text', nullable: true, unsigned: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -305,8 +286,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'status', type: 'varchar', length: 20, nullable: true, default: 'active' }
-        ]
+          { name: 'status', type: 'varchar', length: 20, nullable: true, default: 'active' },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -320,8 +301,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true, default: '0' }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true, default: '0' },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -335,15 +316,13 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'status', type: 'varchar', length: 20, nullable: false }
-        ]
+          { name: 'status', type: 'varchar', length: 20, nullable: false },
+        ],
       });
 
       const options = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', selectedType: 'string', enumClass: 'StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', selectedType: 'string', enumClass: 'StatusEnum' }],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -355,8 +334,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'user_name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const options = { ...defaultOptions, explicitlyDefineColumns: true };
@@ -369,15 +348,13 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
-        ]
+          { name: 'created_at', type: 'datetime', nullable: true },
+        ],
       });
 
       const options = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'createdAt', column: 'created_at', selectedType: 'datetime' }
-        ]
+        columnFieldMappings: [{ field: 'createdAt', column: 'created_at', selectedType: 'datetime' }],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -389,15 +366,13 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
-        ]
+          { name: 'created_at', type: 'datetime', nullable: true },
+        ],
       });
 
       const options = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'createdAt', column: 'created', selectedType: 'datetime' }
-        ]
+        columnFieldMappings: [{ field: 'createdAt', column: 'created', selectedType: 'datetime' }],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -409,8 +384,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'tiny', type: 'smallint', length: 5, nullable: true, unsigned: true }
-        ]
+          { name: 'tiny', type: 'smallint', length: 5, nullable: true, unsigned: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -422,8 +397,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'large', type: 'bigint', length: 20, nullable: true, unsigned: true }
-        ]
+          { name: 'large', type: 'bigint', length: 20, nullable: true, unsigned: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -437,8 +412,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -449,9 +424,9 @@ describe('DoctrineXMLGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -464,8 +439,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -476,9 +451,9 @@ describe('DoctrineXMLGenerator', () => {
             field: 'profile',
             type: 'one-to-one',
             targetEntity: 'Profile',
-            joinColumn: 'profile_id'
-          }
-        ]
+            joinColumn: 'profile_id',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -491,9 +466,7 @@ describe('DoctrineXMLGenerator', () => {
       // Note: Relationships without join columns are not currently supported by ORMMappingUtils
       // This test documents the expected behavior if support is added
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -504,9 +477,9 @@ describe('DoctrineXMLGenerator', () => {
             field: 'comments',
             type: 'one-to-many',
             targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
+            mappedBy: 'post',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -520,9 +493,7 @@ describe('DoctrineXMLGenerator', () => {
       // Note: Relationships without join columns are not currently supported by ORMMappingUtils
       // This test documents the expected behavior if support is added
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -533,9 +504,9 @@ describe('DoctrineXMLGenerator', () => {
             field: 'tags',
             type: 'many-to-many',
             targetEntity: 'Tag',
-            inversedBy: 'posts'
-          }
-        ]
+            inversedBy: 'posts',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -549,8 +520,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -562,9 +533,9 @@ describe('DoctrineXMLGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            fetch: 'EAGER'
-          }
-        ]
+            fetch: 'EAGER',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -576,8 +547,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -589,9 +560,9 @@ describe('DoctrineXMLGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            inversedBy: 'posts'
-          }
-        ]
+            inversedBy: 'posts',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -607,8 +578,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -620,9 +591,9 @@ describe('DoctrineXMLGenerator', () => {
             type: 'one-to-one',
             targetEntity: 'Profile',
             joinColumn: 'profile_id',
-            mappedBy: 'user'
-          }
-        ]
+            mappedBy: 'user',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -634,8 +605,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -647,9 +618,9 @@ describe('DoctrineXMLGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            fetch: 'LAZY'
-          }
-        ]
+            fetch: 'LAZY',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -661,8 +632,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -674,9 +645,9 @@ describe('DoctrineXMLGenerator', () => {
             type: 'one-to-one',
             targetEntity: 'Profile',
             joinColumn: 'profile_id',
-            orphanRemoval: true
-          }
-        ]
+            orphanRemoval: true,
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -688,8 +659,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -700,9 +671,9 @@ describe('DoctrineXMLGenerator', () => {
             field: 'profile',
             type: 'one-to-one',
             targetEntity: 'Profile',
-            joinColumn: 'profile_id'
-          }
-        ]
+            joinColumn: 'profile_id',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -714,34 +685,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
-      });
-
-      const options: GenerationOptions = {
-        ...defaultOptions,
-        relationships: [
-          {
-            id: '1',
-            field: 'user',
-            type: 'many-to-one',
-            targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
-      };
-
-      const xml = DoctrineXMLGenerator.generate(schema, options);
-
-      expect(xml).toContain('nullable="false"');
-    });
-
-    it('should include cascade operations', () => {
-      const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -753,9 +698,35 @@ describe('DoctrineXMLGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            cascade: ['persist', 'remove']
-          }
-        ]
+          },
+        ],
+      };
+
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+
+      expect(xml).toContain('nullable="false"');
+    });
+
+    it('should include cascade operations', () => {
+      const schema = createSchema({
+        columns: [
+          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
+      });
+
+      const options: GenerationOptions = {
+        ...defaultOptions,
+        relationships: [
+          {
+            id: '1',
+            field: 'user',
+            type: 'many-to-one',
+            targetEntity: 'User',
+            joinColumn: 'user_id',
+            cascade: ['persist', 'remove'],
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -769,8 +740,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -782,9 +753,9 @@ describe('DoctrineXMLGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             targetEntityNamespace: 'App\\Model',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -798,11 +769,9 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'email', type: 'varchar', length: 255, nullable: false }
+          { name: 'email', type: 'varchar', length: 255, nullable: false },
         ],
-        indexes: [
-          { name: 'idx_email', columns: ['email'], unique: false, primary: false }
-        ]
+        indexes: [{ name: 'idx_email', columns: ['email'], unique: false, primary: false }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -814,12 +783,8 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should not generate indexes element when no non-primary indexes exist', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ],
-        indexes: [
-          { name: 'PRIMARY', columns: ['id'], unique: false, primary: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
+        indexes: [{ name: 'PRIMARY', columns: ['id'], unique: false, primary: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -832,12 +797,12 @@ describe('DoctrineXMLGenerator', () => {
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
           { name: 'email', type: 'varchar', length: 255, nullable: false },
-          { name: 'username', type: 'varchar', length: 100, nullable: false }
+          { name: 'username', type: 'varchar', length: 100, nullable: false },
         ],
         indexes: [
           { name: 'idx_email', columns: ['email'], unique: false, primary: false },
-          { name: 'idx_username', columns: ['username'], unique: false, primary: false }
-        ]
+          { name: 'idx_username', columns: ['username'], unique: false, primary: false },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -851,11 +816,16 @@ describe('DoctrineXMLGenerator', () => {
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
           { name: 'user_id', type: 'int', nullable: false },
-          { name: 'created_at', type: 'datetime', nullable: false }
+          { name: 'created_at', type: 'datetime', nullable: false },
         ],
         indexes: [
-          { name: 'idx_user_created', columns: ['user_id', 'created_at'], unique: false, primary: false }
-        ]
+          {
+            name: 'idx_user_created',
+            columns: ['user_id', 'created_at'],
+            unique: false,
+            primary: false,
+          },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -867,9 +837,7 @@ describe('DoctrineXMLGenerator', () => {
   describe('Edge cases and error scenarios', () => {
     it('should handle schema without ID column', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+        columns: [{ name: 'name', type: 'varchar', length: 255, nullable: false }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -880,9 +848,7 @@ describe('DoctrineXMLGenerator', () => {
 
     it('should handle empty schema with only ID', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -895,8 +861,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'description', type: 'text', nullable: true }
-        ]
+          { name: 'description', type: 'text', nullable: true },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -912,8 +878,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true },
+        ],
       });
 
       const options = { ...defaultOptions, databaseDialect: DatabaseDialect.POSTGRESQL };
@@ -926,8 +892,8 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true },
+        ],
       });
 
       const options = { ...defaultOptions, databaseDialect: DatabaseDialect.SQLITE };
@@ -940,8 +906,14 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'status', type: 'varchar', length: 20, nullable: true, default: 'active & pending' }
-        ]
+          {
+            name: 'status',
+            type: 'varchar',
+            length: 20,
+            nullable: true,
+            default: 'active & pending',
+          },
+        ],
       });
 
       const xml = DoctrineXMLGenerator.generate(schema, defaultOptions);
@@ -955,9 +927,7 @@ describe('DoctrineXMLGenerator', () => {
       // Note: Relationships without join columns are not currently supported by ORMMappingUtils
       // This test documents the current behavior
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -968,9 +938,9 @@ describe('DoctrineXMLGenerator', () => {
             field: 'comments',
             type: 'one-to-many',
             targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
+            mappedBy: 'post',
+          },
+        ],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -986,20 +956,39 @@ describe('DoctrineXMLGenerator', () => {
       const schema = createSchema({
         name: 'idin_transactions',
         columns: [
-          { name: 'id', type: 'bigint', length: 20, nullable: false, autoIncrement: true, unsigned: true },
+          {
+            name: 'id',
+            type: 'bigint',
+            length: 20,
+            nullable: false,
+            autoIncrement: true,
+            unsigned: true,
+          },
           { name: 'pin', type: 'char', length: 4, nullable: true },
           { name: 'type', type: 'varchar', length: 16, nullable: true },
           { name: 'data_map', type: 'int', length: 11, nullable: true },
           { name: 'data_array', type: 'text', nullable: true },
           { name: 'sub_id', type: 'int', length: 11, nullable: true, unsigned: true },
-          { name: 'external_check_count', type: 'int', length: 11, nullable: true, unsigned: true, default: '0' },
+          {
+            name: 'external_check_count',
+            type: 'int',
+            length: 11,
+            nullable: true,
+            unsigned: true,
+            default: '0',
+          },
           { name: 'created', type: 'int', length: 11, nullable: true },
-          { name: 'deleted', type: 'int', length: 11, nullable: true, unsigned: true }
+          { name: 'deleted', type: 'int', length: 11, nullable: true, unsigned: true },
         ],
         indexes: [
-          { name: 'IDX_transaction_id', columns: ['transaction_id', 'entrance_code'], unique: false, primary: false },
-          { name: 'status', columns: ['status'], unique: false, primary: false }
-        ]
+          {
+            name: 'IDX_transaction_id',
+            columns: ['transaction_id', 'entrance_code'],
+            unique: false,
+            primary: false,
+          },
+          { name: 'status', columns: ['status'], unique: false, primary: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1008,12 +997,10 @@ describe('DoctrineXMLGenerator', () => {
         entitySuffix: '',
         entityName: '',
         databaseDialect: DatabaseDialect.MYSQL,
-        customDataTypes: [
-          { name: 'timestamp', phpType: '\\DateTimeImmutable' }
-        ],
+        customDataTypes: [{ name: 'timestamp', phpType: '\\DateTimeImmutable' }],
         columnFieldMappings: [
           { field: 'createdAt', column: 'created', selectedType: 'timestamp' },
-          { field: 'deletedAt', column: 'deleted', selectedType: 'timestamp' }
+          { field: 'deletedAt', column: 'deleted', selectedType: 'timestamp' },
         ],
         explicitlyDefineColumns: false,
         useAttributeMapping: false,
@@ -1023,7 +1010,7 @@ describe('DoctrineXMLGenerator', () => {
         generateFluentSetters: true,
         relationships: [],
         customTraits: [],
-        selectedTraits: []
+        selectedTraits: [],
       };
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
@@ -1031,23 +1018,23 @@ describe('DoctrineXMLGenerator', () => {
       // Verify structure
       expect(xml).toContain('name="AntiCorruptionLayer\\Tinpay\\Entity\\IdinTransactions"');
       expect(xml).toContain('table="idin_transactions"');
-      
+
       // Verify ID with unsigned
       expect(xml).toContain('<id name="id" type="integer" length="10">');
       expect(xml).toContain('<option name="unsigned">true</option>');
-      
+
       // Verify fields with unsigned
       expect(xml).toContain('<field name="subId" type="integer" length="11" nullable="true">');
       expect(xml).toContain('<option name="unsigned">true</option>');
-      
+
       // Verify field with both unsigned and default
       expect(xml).toContain('<field name="externalCheckCount" type="integer" length="11" nullable="true">');
       expect(xml).toContain('<option name="default">0</option>');
-      
+
       // Verify column mappings
       expect(xml).toContain('column="created"');
       expect(xml).toContain('column="deleted"');
-      
+
       // Verify indexes
       expect(xml).toContain('<indexes>');
       expect(xml).toContain('columns="transaction_id,entrance_code"');

@@ -1,7 +1,7 @@
 export enum DatabaseDialect {
   MYSQL = 'mysql',
   POSTGRESQL = 'postgresql',
-  SQLITE = 'sqlite'
+  SQLITE = 'sqlite',
 }
 
 export interface ExampleQuery {
@@ -37,7 +37,7 @@ export const exampleQueries: ExampleQuery[] = [
   CONSTRAINT fk_orders_shipping_address FOREIGN KEY (shipping_address_id) REFERENCES ecommerce.addresses (id) ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_orders_payment_method FOREIGN KEY (payment_method_id) REFERENCES ecommerce.payment_methods (id) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;`,
-    dialect: DatabaseDialect.MYSQL
+    dialect: DatabaseDialect.MYSQL,
   },
   {
     name: 'PostgreSQL',
@@ -62,7 +62,7 @@ export const exampleQueries: ExampleQuery[] = [
   CONSTRAINT fk_orders_shipping_address FOREIGN KEY (shipping_address_id) REFERENCES ecommerce.addresses (id) ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_orders_payment_method FOREIGN KEY (payment_method_id) REFERENCES ecommerce.payment_methods (id) ON UPDATE CASCADE ON DELETE RESTRICT
 );`,
-    dialect: DatabaseDialect.POSTGRESQL
+    dialect: DatabaseDialect.POSTGRESQL,
   },
   {
     name: 'SQLite',
@@ -94,10 +94,9 @@ AFTER UPDATE ON orders
 BEGIN
   UPDATE orders SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;`,
-    dialect: DatabaseDialect.SQLITE
-  }
+    dialect: DatabaseDialect.SQLITE,
+  },
 ];
 
 // Default query (MySQL/MariaDB)
 export const DEFAULT_QUERY = exampleQueries[0].query;
-

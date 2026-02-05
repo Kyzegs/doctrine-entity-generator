@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ORMMappingUtils } from '../orm-mapping-utils';
-import { TableSchema, TableColumn, GenerationOptions, Relationship } from '../types';
+import { TableSchema, TableColumn, GenerationOptions } from '../types';
 import { DatabaseDialect } from '../example-queries';
 
 describe('ORMMappingUtils', () => {
@@ -9,7 +9,7 @@ describe('ORMMappingUtils', () => {
     columns: [],
     indexes: [],
     constraints: [],
-    ...overrides
+    ...overrides,
   });
 
   const createColumn = (overrides: Partial<TableColumn> = {}): TableColumn => ({
@@ -17,7 +17,7 @@ describe('ORMMappingUtils', () => {
     type: 'varchar',
     nullable: true,
     autoIncrement: false,
-    ...overrides
+    ...overrides,
   });
 
   const defaultOptions: GenerationOptions = {
@@ -36,15 +36,13 @@ describe('ORMMappingUtils', () => {
     generateFluentSetters: true,
     relationships: [],
     customTraits: [],
-    selectedTraits: []
+    selectedTraits: [],
   };
 
   describe('createORMMapping', () => {
     it('should create basic field mapping', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'name', type: 'varchar', length: 255, nullable: true })
-        ]
+        columns: [createColumn({ name: 'name', type: 'varchar', length: 255, nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -63,30 +61,30 @@ describe('ORMMappingUtils', () => {
       const schema = createSchema({
         columns: [
           createColumn({ name: 'id', type: 'int', nullable: false, autoIncrement: true }),
-          createColumn({ name: 'name', type: 'varchar', nullable: true })
-        ]
+          createColumn({ name: 'name', type: 'varchar', nullable: true }),
+        ],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
 
       expect(mapping.fields).toHaveLength(1);
       expect(mapping.fields[0].name).toBe('name');
-      expect(mapping.fields.find(f => f.name === 'id')).toBeUndefined();
+      expect(mapping.fields.find((f) => f.name === 'id')).toBeUndefined();
     });
 
     it('should skip auto-increment columns', () => {
       const schema = createSchema({
         columns: [
           createColumn({ name: 'pk', type: 'int', nullable: false, autoIncrement: true }),
-          createColumn({ name: 'name', type: 'varchar', nullable: true })
-        ]
+          createColumn({ name: 'name', type: 'varchar', nullable: true }),
+        ],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
 
       expect(mapping.fields).toHaveLength(1);
       expect(mapping.fields[0].name).toBe('name');
-      expect(mapping.fields.find(f => f.name === 'pk')).toBeUndefined();
+      expect(mapping.fields.find((f) => f.name === 'pk')).toBeUndefined();
     });
 
     it('should convert column names to camelCase field names', () => {
@@ -94,8 +92,8 @@ describe('ORMMappingUtils', () => {
         columns: [
           createColumn({ name: 'user_name', type: 'varchar', nullable: true }),
           createColumn({ name: 'created_at', type: 'datetime', nullable: true }),
-          createColumn({ name: 'is_active', type: 'boolean', nullable: true })
-        ]
+          createColumn({ name: 'is_active', type: 'boolean', nullable: true }),
+        ],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -109,8 +107,8 @@ describe('ORMMappingUtils', () => {
       const schema = createSchema({
         columns: [
           createColumn({ name: 'nullable_field', type: 'varchar', nullable: true }),
-          createColumn({ name: 'required_field', type: 'varchar', nullable: false })
-        ]
+          createColumn({ name: 'required_field', type: 'varchar', nullable: false }),
+        ],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -123,9 +121,7 @@ describe('ORMMappingUtils', () => {
 
     it('should preserve unsigned property', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'count', type: 'int', nullable: true, unsigned: true })
-        ]
+        columns: [createColumn({ name: 'count', type: 'int', nullable: true, unsigned: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -135,9 +131,7 @@ describe('ORMMappingUtils', () => {
 
     it('should preserve default value', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'status', type: 'varchar', nullable: true, default: 'active' })
-        ]
+        columns: [createColumn({ name: 'status', type: 'varchar', nullable: true, default: 'active' })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -149,8 +143,8 @@ describe('ORMMappingUtils', () => {
       const schema = createSchema({
         columns: [
           createColumn({ name: 'code', type: 'varchar', length: 10, nullable: true }),
-          createColumn({ name: 'description', type: 'text', nullable: true })
-        ]
+          createColumn({ name: 'description', type: 'text', nullable: true }),
+        ],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -161,9 +155,7 @@ describe('ORMMappingUtils', () => {
 
     it('should skip relationship columns', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'user_id', type: 'int', nullable: true })
-        ]
+        columns: [createColumn({ name: 'user_id', type: 'int', nullable: true })],
       });
 
       const options: GenerationOptions = {
@@ -174,9 +166,9 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -191,8 +183,8 @@ describe('ORMMappingUtils', () => {
         columns: [
           createColumn({ name: 'user_id', type: 'int', nullable: true }),
           createColumn({ name: 'name', type: 'varchar', nullable: true }),
-          createColumn({ name: 'profile_id', type: 'int', nullable: true })
-        ]
+          createColumn({ name: 'profile_id', type: 'int', nullable: true }),
+        ],
       });
 
       const options: GenerationOptions = {
@@ -203,16 +195,16 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
+            joinColumn: 'user_id',
           },
           {
             id: '2',
             field: 'profile',
             type: 'one-to-one',
             targetEntity: 'Profile',
-            joinColumn: 'profile_id'
-          }
-        ]
+            joinColumn: 'profile_id',
+          },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -224,9 +216,7 @@ describe('ORMMappingUtils', () => {
 
     it('should not include relationships without matching columns', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'name', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'name', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
@@ -237,9 +227,9 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -249,9 +239,7 @@ describe('ORMMappingUtils', () => {
 
     it('should not include _id columns that are not configured as relationships', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'user_id', type: 'int', nullable: true })
-        ]
+        columns: [createColumn({ name: 'user_id', type: 'int', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -264,9 +252,7 @@ describe('ORMMappingUtils', () => {
 
     it('should handle relationship column without matching relationship in options', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'user_id', type: 'int', nullable: true })
-        ]
+        columns: [createColumn({ name: 'user_id', type: 'int', nullable: true })],
       });
 
       const options: GenerationOptions = {
@@ -277,9 +263,9 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'profile_id' // Different column name
-          }
-        ]
+            joinColumn: 'profile_id', // Different column name
+          },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -292,14 +278,12 @@ describe('ORMMappingUtils', () => {
 
     it('should handle relationship column where relationship is not found', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'user_id', type: 'int', nullable: true })
-        ]
+        columns: [createColumn({ name: 'user_id', type: 'int', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        relationships: [] // Empty relationships array
+        relationships: [], // Empty relationships array
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -325,9 +309,7 @@ describe('ORMMappingUtils', () => {
     it('should use custom mapping when provided', () => {
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'customFieldName', column: 'user_name', selectedType: 'string' }
-        ]
+        columnFieldMappings: [{ field: 'customFieldName', column: 'user_name', selectedType: 'string' }],
       };
 
       expect(ORMMappingUtils.getFieldName('user_name', options)).toBe('customFieldName');
@@ -336,9 +318,7 @@ describe('ORMMappingUtils', () => {
     it('should fall back to camelCase if no custom mapping', () => {
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'otherField', column: 'other_column', selectedType: 'string' }
-        ]
+        columnFieldMappings: [{ field: 'otherField', column: 'other_column', selectedType: 'string' }],
       };
 
       expect(ORMMappingUtils.getFieldName('user_name', options)).toBe('userName');
@@ -447,8 +427,12 @@ describe('ORMMappingUtils', () => {
     });
 
     it('should map datetime types to DateTimeImmutable', () => {
-      expect(ORMMappingUtils.mapToPHPType(createColumn({ type: 'datetime' }), defaultOptions)).toBe('DateTimeImmutable');
-      expect(ORMMappingUtils.mapToPHPType(createColumn({ type: 'timestamp' }), defaultOptions)).toBe('DateTimeImmutable');
+      expect(ORMMappingUtils.mapToPHPType(createColumn({ type: 'datetime' }), defaultOptions)).toBe(
+        'DateTimeImmutable'
+      );
+      expect(ORMMappingUtils.mapToPHPType(createColumn({ type: 'timestamp' }), defaultOptions)).toBe(
+        'DateTimeImmutable'
+      );
     });
 
     it('should map date to DateTimeImmutable', () => {
@@ -476,16 +460,12 @@ describe('ORMMappingUtils', () => {
     it('should use custom mapping when provided', () => {
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', column: 'status', selectedType: 'StatusEnum' }
-        ],
-        customDataTypes: [
-          { name: 'StatusEnum', phpType: 'App\\Enum\\StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', column: 'status', selectedType: 'StatusEnum' }],
+        customDataTypes: [{ name: 'StatusEnum', phpType: 'App\\Enum\\StatusEnum' }],
       };
 
       const schema = createSchema({
-        columns: [createColumn({ name: 'status', type: 'varchar' })]
+        columns: [createColumn({ name: 'status', type: 'varchar' })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -495,13 +475,11 @@ describe('ORMMappingUtils', () => {
     it('should use enum class when provided', () => {
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', column: 'status', selectedType: 'string', enumClass: 'StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', column: 'status', selectedType: 'string', enumClass: 'StatusEnum' }],
       };
 
       const schema = createSchema({
-        columns: [createColumn({ name: 'status', type: 'varchar' })]
+        columns: [createColumn({ name: 'status', type: 'varchar' })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -512,13 +490,11 @@ describe('ORMMappingUtils', () => {
     it('should use custom data type by field name', () => {
       const options: GenerationOptions = {
         ...defaultOptions,
-        customDataTypes: [
-          { name: 'status', phpType: 'App\\Enum\\StatusEnum' }
-        ]
+        customDataTypes: [{ name: 'status', phpType: 'App\\Enum\\StatusEnum' }],
       };
 
       const schema = createSchema({
-        columns: [createColumn({ name: 'status', type: 'varchar' })]
+        columns: [createColumn({ name: 'status', type: 'varchar' })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -581,9 +557,9 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
 
       expect(ORMMappingUtils.isConfiguredAsRelationship('user_id', options)).toBe(true);
@@ -598,9 +574,9 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
 
       expect(ORMMappingUtils.isConfiguredAsRelationship('profile_id', options)).toBe(false);
@@ -613,7 +589,7 @@ describe('ORMMappingUtils', () => {
     it('should return false when relationships array is empty', () => {
       const options: GenerationOptions = {
         ...defaultOptions,
-        relationships: []
+        relationships: [],
       };
 
       expect(ORMMappingUtils.isConfiguredAsRelationship('user_id', options)).toBe(false);
@@ -623,16 +599,12 @@ describe('ORMMappingUtils', () => {
   describe('createORMMapping - Custom mappings', () => {
     it('should use custom field name from column mapping', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'user_name', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'user_name', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'fullName', column: 'user_name', selectedType: 'string' }
-        ]
+        columnFieldMappings: [{ field: 'fullName', column: 'user_name', selectedType: 'string' }],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -643,16 +615,12 @@ describe('ORMMappingUtils', () => {
 
     it('should use custom Doctrine type from column mapping', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'status', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'status', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', column: 'status', selectedType: 'integer' }
-        ]
+        columnFieldMappings: [{ field: 'status', column: 'status', selectedType: 'integer' }],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -662,19 +630,13 @@ describe('ORMMappingUtils', () => {
 
     it('should use custom data type when referenced in column mapping', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'status', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'status', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', column: 'status', selectedType: 'StatusEnum' }
-        ],
-        customDataTypes: [
-          { name: 'StatusEnum', phpType: 'App\\Enum\\StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', column: 'status', selectedType: 'StatusEnum' }],
+        customDataTypes: [{ name: 'StatusEnum', phpType: 'App\\Enum\\StatusEnum' }],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -685,16 +647,12 @@ describe('ORMMappingUtils', () => {
 
     it('should use custom data type by field name when no column mapping', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'status', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'status', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        customDataTypes: [
-          { name: 'status', phpType: 'App\\Enum\\StatusEnum' }
-        ]
+        customDataTypes: [{ name: 'status', phpType: 'App\\Enum\\StatusEnum' }],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -704,19 +662,13 @@ describe('ORMMappingUtils', () => {
 
     it('should prioritize column mapping over field name custom data type', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'status', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'status', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', column: 'status', selectedType: 'integer' }
-        ],
-        customDataTypes: [
-          { name: 'status', phpType: 'App\\Enum\\StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', column: 'status', selectedType: 'integer' }],
+        customDataTypes: [{ name: 'status', phpType: 'App\\Enum\\StatusEnum' }],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -727,16 +679,12 @@ describe('ORMMappingUtils', () => {
 
     it('should handle enum class in column mapping', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'status', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'status', type: 'varchar', nullable: true })],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        columnFieldMappings: [
-          { field: 'status', column: 'status', selectedType: 'string', enumClass: 'StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', column: 'status', selectedType: 'string', enumClass: 'StatusEnum' }],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -758,9 +706,7 @@ describe('ORMMappingUtils', () => {
 
     it('should handle schema with only ID column', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'id', type: 'int', nullable: false, autoIncrement: true })
-        ]
+        columns: [createColumn({ name: 'id', type: 'int', nullable: false, autoIncrement: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -774,8 +720,8 @@ describe('ORMMappingUtils', () => {
         columns: [
           createColumn({ name: 'first', type: 'varchar', nullable: true }),
           createColumn({ name: 'second', type: 'varchar', nullable: true }),
-          createColumn({ name: 'third', type: 'varchar', nullable: true })
-        ]
+          createColumn({ name: 'third', type: 'varchar', nullable: true }),
+        ],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -788,9 +734,7 @@ describe('ORMMappingUtils', () => {
 
     it('should handle columns without length', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'description', type: 'text', nullable: true })
-        ]
+        columns: [createColumn({ name: 'description', type: 'text', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -800,9 +744,7 @@ describe('ORMMappingUtils', () => {
 
     it('should handle columns without default value', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'name', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'name', type: 'varchar', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -812,9 +754,7 @@ describe('ORMMappingUtils', () => {
 
     it('should handle columns without unsigned property', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'count', type: 'int', nullable: true })
-        ]
+        columns: [createColumn({ name: 'count', type: 'int', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -824,9 +764,7 @@ describe('ORMMappingUtils', () => {
 
     it('should set isTimestamp to false', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'created_at', type: 'datetime', nullable: true })
-        ]
+        columns: [createColumn({ name: 'created_at', type: 'datetime', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -836,9 +774,7 @@ describe('ORMMappingUtils', () => {
 
     it('should set isByField to false', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'created_by', type: 'int', nullable: true })
-        ]
+        columns: [createColumn({ name: 'created_by', type: 'int', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -848,9 +784,7 @@ describe('ORMMappingUtils', () => {
 
     it('should set isRelationship to false for regular fields', () => {
       const schema = createSchema({
-        columns: [
-          createColumn({ name: 'name', type: 'varchar', nullable: true })
-        ]
+        columns: [createColumn({ name: 'name', type: 'varchar', nullable: true })],
       });
 
       const mapping = ORMMappingUtils.createORMMapping(schema, defaultOptions);
@@ -867,8 +801,8 @@ describe('ORMMappingUtils', () => {
           createColumn({ name: 'user_id', type: 'int', nullable: true }),
           createColumn({ name: 'name', type: 'varchar', length: 255, nullable: false }),
           createColumn({ name: 'email', type: 'varchar', length: 255, nullable: true }),
-          createColumn({ name: 'profile_id', type: 'int', nullable: true })
-        ]
+          createColumn({ name: 'profile_id', type: 'int', nullable: true }),
+        ],
       });
 
       const options: GenerationOptions = {
@@ -879,16 +813,16 @@ describe('ORMMappingUtils', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
+            joinColumn: 'user_id',
           },
           {
             id: '2',
             field: 'profile',
             type: 'one-to-one',
             targetEntity: 'Profile',
-            joinColumn: 'profile_id'
-          }
-        ]
+            joinColumn: 'profile_id',
+          },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -905,16 +839,16 @@ describe('ORMMappingUtils', () => {
       const schema = createSchema({
         columns: [
           createColumn({ name: 'status', type: 'varchar', nullable: true }),
-          createColumn({ name: 'priority', type: 'varchar', nullable: true })
-        ]
+          createColumn({ name: 'priority', type: 'varchar', nullable: true }),
+        ],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customDataTypes: [
           { name: 'status', phpType: 'App\\Enum\\StatusEnum' },
-          { name: 'priority', phpType: 'App\\Enum\\PriorityEnum' }
-        ]
+          { name: 'priority', phpType: 'App\\Enum\\PriorityEnum' },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
@@ -927,8 +861,8 @@ describe('ORMMappingUtils', () => {
       const schema = createSchema({
         columns: [
           createColumn({ name: 'created_by_id', type: 'int', nullable: true }),
-          createColumn({ name: 'updated_by_id', type: 'int', nullable: true })
-        ]
+          createColumn({ name: 'updated_by_id', type: 'int', nullable: true }),
+        ],
       });
 
       const options: GenerationOptions = {
@@ -939,16 +873,16 @@ describe('ORMMappingUtils', () => {
             field: 'createdBy',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'created_by_id'
+            joinColumn: 'created_by_id',
           },
           {
             id: '2',
             field: 'updatedBy',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'updated_by_id'
-          }
-        ]
+            joinColumn: 'updated_by_id',
+          },
+        ],
       };
 
       const mapping = ORMMappingUtils.createORMMapping(schema, options);

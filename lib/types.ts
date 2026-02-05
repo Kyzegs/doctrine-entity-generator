@@ -84,29 +84,28 @@ export interface TraitProperty {
   hasSetter: boolean;
 }
 
-
 export interface GenerationOptions {
   namespace: string;
   entityPrefix: string;
   entitySuffix: string;
   entityName: string; // Manual override for entity name (not shareable)
   databaseDialect: DatabaseDialect;
-  
+
   // ORM mapping settings
   customDataTypes: CustomDataType[];
   columnFieldMappings: ColumnFieldMapping[];
   explicitlyDefineColumns: boolean;
   useAttributeMapping: boolean; // Use Doctrine attributes instead of XML mapping
-  
+
   // PHP Entity Class settings
   publicProperties: boolean;
   generateGetters: boolean;
   generateSetters: boolean;
   generateFluentSetters: boolean;
-  
+
   // Relationship settings
   relationships: Relationship[];
-  
+
   // Trait settings
   customTraits: CustomTrait[];
   selectedTraits: string[];

@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Share2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface CodeTab {
   id: string;
@@ -24,7 +22,13 @@ interface TabbedCodeOutputProps {
   hideShareButton?: boolean;
 }
 
-export function TabbedCodeOutput({ tabs, activeTab, onTabChange, onShare, hideShareButton = false }: TabbedCodeOutputProps) {
+export function TabbedCodeOutput({
+  tabs,
+  activeTab,
+  onTabChange,
+  onShare,
+  hideShareButton = false,
+}: TabbedCodeOutputProps) {
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
 
   const copyToClipboard = async (code: string, tabId: string) => {
@@ -63,11 +67,7 @@ export function TabbedCodeOutput({ tabs, activeTab, onTabChange, onShare, hideSh
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      <Tabs 
-        value={activeTab || tabs[0]?.id} 
-        onValueChange={onTabChange}
-        className="w-full gap-0"
-      >
+      <Tabs value={activeTab || tabs[0]?.id} onValueChange={onTabChange} className="w-full gap-0">
         <div className="bg-card px-4 py-2">
           <TabsList className="h-auto p-1 bg-card">
             {tabs.map((tab) => (
@@ -80,19 +80,14 @@ export function TabbedCodeOutput({ tabs, activeTab, onTabChange, onShare, hideSh
               </TabsTrigger>
             ))}
           </TabsList>
-        </div>  
+        </div>
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="m-0">
             <div className="bg-muted px-4 py-2 flex justify-between items-center">
               <h3 className="font-medium text-foreground">{tab.title}</h3>
               <div className="flex items-center gap-2">
                 {!hideShareButton && (
-                  <Button
-                    onClick={() => handleShare(tab.id)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
+                  <Button onClick={() => handleShare(tab.id)} variant="outline" size="sm" className="gap-2">
                     <Share2 className="h-3.5 w-3.5" />
                     Share
                   </Button>

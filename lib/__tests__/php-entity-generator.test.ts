@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PHPEntityGenerator } from '../php-entity-generator';
-import { TableSchema, TableColumn, GenerationOptions, Relationship, CustomTrait } from '../types';
+import { TableSchema, GenerationOptions, CustomTrait } from '../types';
 import { DatabaseDialect } from '../example-queries';
 
 describe('PHPEntityGenerator', () => {
@@ -20,7 +20,7 @@ describe('PHPEntityGenerator', () => {
     generateFluentSetters: true,
     relationships: [],
     customTraits: [],
-    selectedTraits: []
+    selectedTraits: [],
   };
 
   const createSchema = (overrides: Partial<TableSchema> = {}): TableSchema => ({
@@ -28,15 +28,13 @@ describe('PHPEntityGenerator', () => {
     columns: [],
     indexes: [],
     constraints: [],
-    ...overrides
+    ...overrides,
   });
 
   describe('generate - Basic structure', () => {
     it('should generate PHP file with strict types', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -46,9 +44,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate namespace when provided', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -58,9 +54,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate empty namespace when not provided', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, namespace: '' };
@@ -73,9 +67,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should include common imports', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -87,9 +79,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should include Doctrine ORM imports when using attribute mapping', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
@@ -100,9 +90,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should not include Doctrine ORM imports when not using attribute mapping', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -112,9 +100,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate class with correct name', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -124,9 +110,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should use custom entity name when provided', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, entityName: 'CustomEntity' };
@@ -137,15 +121,13 @@ describe('PHPEntityGenerator', () => {
 
     it('should apply entity prefix and suffix', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = {
         ...defaultOptions,
         entityPrefix: 'Base',
-        entitySuffix: 'Model'
+        entitySuffix: 'Model',
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -154,16 +136,14 @@ describe('PHPEntityGenerator', () => {
 
     it('should add Doctrine Entity attribute when using attribute mapping', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
       const php = PHPEntityGenerator.generate(schema, options);
 
       expect(php).toContain('#[ORM\\Entity]');
-      expect(php).toContain('#[ORM\\Table(name: \'test_table\')]');
+      expect(php).toContain("#[ORM\\Table(name: 'test_table')]");
     });
   });
 
@@ -172,8 +152,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -185,8 +165,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const options = { ...defaultOptions, publicProperties: true };
@@ -199,8 +179,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'email', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'email', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -212,8 +192,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -228,9 +208,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate ID property only if nullable', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: true, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: true, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -240,9 +218,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should not generate ID property if non-nullable (goes in constructor)', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -256,38 +232,34 @@ describe('PHPEntityGenerator', () => {
 
     it('should add Doctrine attributes to ID property when using attribute mapping', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: true, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: true, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
       const php = PHPEntityGenerator.generate(schema, options);
 
       expect(php).toContain('#[ORM\\Id]');
-      expect(php).toContain('#[ORM\\Column(type: \'integer\')]');
+      expect(php).toContain("#[ORM\\Column(type: 'integer')]");
       expect(php).toContain('#[ORM\\GeneratedValue]');
     });
 
     it('should add unsigned option to ID column attribute for MySQL', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'bigint', nullable: true, autoIncrement: true, unsigned: true }
-        ]
+        columns: [{ name: 'id', type: 'bigint', nullable: true, autoIncrement: true, unsigned: true }],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('options: [\'unsigned\' => true]');
+      expect(php).toContain("options: ['unsigned' => true]");
     });
 
     it('should add Doctrine Column attribute to field properties when using attribute mapping', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'age', type: 'int', length: 11, nullable: true }
-        ]
+          { name: 'age', type: 'int', length: 11, nullable: true },
+        ],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
@@ -295,7 +267,7 @@ describe('PHPEntityGenerator', () => {
 
       // Length is only added for string/text types, not integer types
       expect(php).toContain('#[ORM\\Column');
-      expect(php).toContain('type: \'integer\'');
+      expect(php).toContain("type: 'integer'");
       expect(php).toContain('nullable: true');
     });
 
@@ -303,72 +275,68 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true },
+        ],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('options: [\'unsigned\' => true]');
+      expect(php).toContain("options: ['unsigned' => true]");
     });
 
     it('should add enum type to column attribute when specified', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'status', type: 'varchar', length: 20, nullable: false }
-        ]
+          { name: 'status', type: 'varchar', length: 20, nullable: false },
+        ],
       });
 
       const options = {
         ...defaultOptions,
         useAttributeMapping: true,
-        columnFieldMappings: [
-          { field: 'status', selectedType: 'string', enumClass: 'StatusEnum' }
-        ]
+        columnFieldMappings: [{ field: 'status', selectedType: 'string', enumClass: 'StatusEnum' }],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('enumType: \'StatusEnum\'');
+      expect(php).toContain("enumType: 'StatusEnum'");
     });
 
     it('should include column name in attribute when explicitlyDefineColumns is true', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'user_name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const options = {
         ...defaultOptions,
         useAttributeMapping: true,
-        explicitlyDefineColumns: true
+        explicitlyDefineColumns: true,
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('name: \'user_name\'');
+      expect(php).toContain("name: 'user_name'");
     });
 
     it('should include column name in attribute when custom mapping has column', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
-        ]
+          { name: 'created_at', type: 'datetime', nullable: true },
+        ],
       });
 
       const options = {
         ...defaultOptions,
         useAttributeMapping: true,
-        columnFieldMappings: [
-          { field: 'createdAt', column: 'created_at', selectedType: 'datetime' }
-        ]
+        columnFieldMappings: [{ field: 'createdAt', column: 'created_at', selectedType: 'datetime' }],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('name: \'created_at\'');
+      expect(php).toContain("name: 'created_at'");
     });
   });
 
@@ -377,8 +345,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -391,8 +359,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: true, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -402,9 +370,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should include ID in constructor when non-nullable', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -417,8 +383,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -432,8 +398,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
@@ -442,7 +408,7 @@ describe('PHPEntityGenerator', () => {
       // Attributes might be on separate lines or combined with commas
       expect(php).toContain('ORM\\Id');
       expect(php).toContain('ORM\\Column');
-      expect(php).toContain('type: \'integer\'');
+      expect(php).toContain("type: 'integer'");
       expect(php).toContain('ORM\\GeneratedValue');
     });
 
@@ -450,8 +416,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -462,9 +428,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -476,8 +442,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -488,9 +454,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -505,9 +471,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should not include collection relationships in constructor', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -518,9 +482,9 @@ describe('PHPEntityGenerator', () => {
             field: 'comments',
             type: 'one-to-many',
             targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
+            mappedBy: 'post',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -531,9 +495,7 @@ describe('PHPEntityGenerator', () => {
   describe('generate - Accessors (Getters/Setters)', () => {
     it('should generate getter for ID when generateGetters is true', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -544,9 +506,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate setter for ID when generateSetters is true', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -558,9 +518,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate void setter when generateFluentSetters is false', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, generateFluentSetters: false };
@@ -574,8 +532,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const options = { ...defaultOptions, generateGetters: false };
@@ -588,8 +546,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const options = { ...defaultOptions, generateSetters: false };
@@ -602,8 +560,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'email', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'email', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -615,8 +573,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -628,8 +586,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -640,9 +598,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -653,8 +611,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -665,9 +623,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -676,9 +634,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate getter for collection relationship with Collection return type', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -689,9 +645,9 @@ describe('PHPEntityGenerator', () => {
             field: 'comments',
             type: 'one-to-many',
             targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
+            mappedBy: 'post',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -712,8 +668,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -724,9 +680,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -737,8 +693,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -749,9 +705,9 @@ describe('PHPEntityGenerator', () => {
             field: 'profile',
             type: 'one-to-one',
             targetEntity: 'Profile',
-            joinColumn: 'profile_id'
-          }
-        ]
+            joinColumn: 'profile_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -760,9 +716,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate one-to-many relationship property with Collection type', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -773,9 +727,9 @@ describe('PHPEntityGenerator', () => {
             field: 'comments',
             type: 'one-to-many',
             targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
+            mappedBy: 'post',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -786,9 +740,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should generate many-to-many relationship property with Collection type', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options: GenerationOptions = {
@@ -799,9 +751,9 @@ describe('PHPEntityGenerator', () => {
             field: 'tags',
             type: 'many-to-many',
             targetEntity: 'Tag',
-            inversedBy: 'posts'
-          }
-        ]
+            inversedBy: 'posts',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -814,62 +766,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
-      });
-
-      const options: GenerationOptions = {
-        ...defaultOptions,
-        useAttributeMapping: true,
-        relationships: [
-          {
-            id: '1',
-            field: 'user',
-            type: 'many-to-one',
-            targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
-      };
-      const php = PHPEntityGenerator.generate(schema, options);
-
-      expect(php).toContain('#[ORM\\ManyToOne(targetEntity: User::class)]');
-      expect(php).toContain('#[ORM\\JoinColumn(name: \'user_id\', nullable: true)]');
-    });
-
-    it('should add mappedBy to relationship attribute', () => {
-      const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
-      });
-
-      const options: GenerationOptions = {
-        ...defaultOptions,
-        useAttributeMapping: true,
-        relationships: [
-          {
-            id: '1',
-            field: 'comments',
-            type: 'one-to-many',
-            targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
-      };
-      const php = PHPEntityGenerator.generate(schema, options);
-
-      // One-to-many relationships without joinColumn are not included in ORM mapping
-      // This reflects current implementation limitation
-      expect(php).not.toContain('mappedBy: \'post\'');
-    });
-
-    it('should add inversedBy to relationship attribute', () => {
-      const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -882,21 +780,73 @@ describe('PHPEntityGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            inversedBy: 'posts'
-          }
-        ]
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('inversedBy: \'posts\'');
+      expect(php).toContain('#[ORM\\ManyToOne(targetEntity: User::class)]');
+      expect(php).toContain("#[ORM\\JoinColumn(name: 'user_id', nullable: true)]");
+    });
+
+    it('should add mappedBy to relationship attribute', () => {
+      const schema = createSchema({
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
+      });
+
+      const options: GenerationOptions = {
+        ...defaultOptions,
+        useAttributeMapping: true,
+        relationships: [
+          {
+            id: '1',
+            field: 'comments',
+            type: 'one-to-many',
+            targetEntity: 'Comment',
+            mappedBy: 'post',
+          },
+        ],
+      };
+      const php = PHPEntityGenerator.generate(schema, options);
+
+      // One-to-many relationships without joinColumn are not included in ORM mapping
+      // This reflects current implementation limitation
+      expect(php).not.toContain("mappedBy: 'post'");
+    });
+
+    it('should add inversedBy to relationship attribute', () => {
+      const schema = createSchema({
+        columns: [
+          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
+      });
+
+      const options: GenerationOptions = {
+        ...defaultOptions,
+        useAttributeMapping: true,
+        relationships: [
+          {
+            id: '1',
+            field: 'user',
+            type: 'many-to-one',
+            targetEntity: 'User',
+            joinColumn: 'user_id',
+            inversedBy: 'posts',
+          },
+        ],
+      };
+      const php = PHPEntityGenerator.generate(schema, options);
+
+      expect(php).toContain("inversedBy: 'posts'");
     });
 
     it('should add mappedBy to relationship attribute when relationship has joinColumn', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -909,21 +859,21 @@ describe('PHPEntityGenerator', () => {
             type: 'one-to-one',
             targetEntity: 'Profile',
             joinColumn: 'profile_id',
-            mappedBy: 'user'
-          }
-        ]
+            mappedBy: 'user',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('mappedBy: \'user\'');
+      expect(php).toContain("mappedBy: 'user'");
     });
 
     it('should use targetEntityNamespace when provided', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -936,9 +886,9 @@ describe('PHPEntityGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            targetEntityNamespace: 'App\\Model'
-          }
-        ]
+            targetEntityNamespace: 'App\\Model',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -950,14 +900,14 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', nullable: false }
-        ]
+          { name: 'name', type: 'varchar', nullable: false },
+        ],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
         useAttributeMapping: true,
-        explicitlyDefineColumns: false
+        explicitlyDefineColumns: false,
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -970,8 +920,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -984,21 +934,21 @@ describe('PHPEntityGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            fetch: 'EAGER'
-          }
-        ]
+            fetch: 'EAGER',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('fetch: \'EAGER\'');
+      expect(php).toContain("fetch: 'EAGER'");
     });
 
     it('should add orphanRemoval to relationship attribute', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1011,9 +961,9 @@ describe('PHPEntityGenerator', () => {
             type: 'one-to-one',
             targetEntity: 'Profile',
             joinColumn: 'profile_id',
-            orphanRemoval: true
-          }
-        ]
+            orphanRemoval: true,
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1024,8 +974,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1038,21 +988,21 @@ describe('PHPEntityGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            cascade: ['persist', 'remove']
-          }
-        ]
+            cascade: ['persist', 'remove'],
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('cascade: [\'persist\', \'remove\']');
+      expect(php).toContain("cascade: ['persist', 'remove']");
     });
 
     it('should use targetEntityNamespace when provided', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1064,9 +1014,9 @@ describe('PHPEntityGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             targetEntityNamespace: 'App\\Model',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1077,9 +1027,7 @@ describe('PHPEntityGenerator', () => {
   describe('generate - Traits', () => {
     it('should import trait when selected', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const trait: CustomTrait = {
@@ -1089,13 +1037,13 @@ describe('PHPEntityGenerator', () => {
         description: 'Adds timestamps',
         namespace: 'App\\Trait',
         properties: [],
-        requiredInterfaces: []
+        requiredInterfaces: [],
       };
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customTraits: [trait],
-        selectedTraits: ['trait1']
+        selectedTraits: ['trait1'],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1104,9 +1052,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should add trait to class', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const trait: CustomTrait = {
@@ -1116,13 +1062,13 @@ describe('PHPEntityGenerator', () => {
         description: 'Adds timestamps',
         namespace: 'App\\Trait',
         properties: [],
-        requiredInterfaces: []
+        requiredInterfaces: [],
       };
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customTraits: [trait],
-        selectedTraits: ['trait1']
+        selectedTraits: ['trait1'],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1131,9 +1077,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should add required interfaces from traits', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const trait: CustomTrait = {
@@ -1143,13 +1087,13 @@ describe('PHPEntityGenerator', () => {
         description: 'Adds timestamps',
         namespace: 'App\\Trait',
         properties: [],
-        requiredInterfaces: ['TimestampableInterface']
+        requiredInterfaces: ['TimestampableInterface'],
       };
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customTraits: [trait],
-        selectedTraits: ['trait1']
+        selectedTraits: ['trait1'],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1160,8 +1104,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
-        ]
+          { name: 'created_at', type: 'datetime', nullable: true },
+        ],
       });
 
       const trait: CustomTrait = {
@@ -1178,16 +1122,16 @@ describe('PHPEntityGenerator', () => {
             nullable: true,
             description: 'Created at',
             hasGetter: true,
-            hasSetter: true
-          }
+            hasSetter: true,
+          },
         ],
-        requiredInterfaces: []
+        requiredInterfaces: [],
       };
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customTraits: [trait],
-        selectedTraits: ['trait1']
+        selectedTraits: ['trait1'],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1200,8 +1144,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
-        ]
+          { name: 'created_at', type: 'datetime', nullable: true },
+        ],
       });
 
       const trait: CustomTrait = {
@@ -1218,16 +1162,16 @@ describe('PHPEntityGenerator', () => {
             nullable: true,
             description: 'Created at',
             hasGetter: true,
-            hasSetter: false
-          }
+            hasSetter: false,
+          },
         ],
-        requiredInterfaces: []
+        requiredInterfaces: [],
       };
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customTraits: [trait],
-        selectedTraits: ['trait1']
+        selectedTraits: ['trait1'],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1240,8 +1184,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
-        ]
+          { name: 'created_at', type: 'datetime', nullable: true },
+        ],
       });
 
       const trait: CustomTrait = {
@@ -1258,16 +1202,16 @@ describe('PHPEntityGenerator', () => {
             nullable: true,
             description: 'Created at',
             hasGetter: false,
-            hasSetter: true
-          }
+            hasSetter: true,
+          },
         ],
-        requiredInterfaces: []
+        requiredInterfaces: [],
       };
 
       const options: GenerationOptions = {
         ...defaultOptions,
         customTraits: [trait],
-        selectedTraits: ['trait1']
+        selectedTraits: ['trait1'],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1280,8 +1224,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: false }
-        ]
+          { name: 'user_id', type: 'int', nullable: false },
+        ],
       });
 
       const trait: CustomTrait = {
@@ -1298,10 +1242,10 @@ describe('PHPEntityGenerator', () => {
             nullable: false,
             description: 'User',
             hasGetter: true,
-            hasSetter: true
-          }
+            hasSetter: true,
+          },
         ],
-        requiredInterfaces: []
+        requiredInterfaces: [],
       };
 
       const options: GenerationOptions = {
@@ -1314,9 +1258,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1331,8 +1275,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'pk', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'id', type: 'varchar', length: 50, nullable: true }
-        ]
+          { name: 'id', type: 'varchar', length: 50, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -1346,9 +1290,7 @@ describe('PHPEntityGenerator', () => {
   describe('generate - Edge cases', () => {
     it('should handle schema without ID column', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'name', type: 'varchar', length: 255, nullable: false }
-        ]
+        columns: [{ name: 'name', type: 'varchar', length: 255, nullable: false }],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -1359,7 +1301,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should handle empty schema', () => {
       const schema = createSchema({
-        columns: []
+        columns: [],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -1372,8 +1314,8 @@ describe('PHPEntityGenerator', () => {
         columns: [
           { name: 'id', type: 'int', nullable: true, autoIncrement: true },
           { name: 'name', type: 'varchar', length: 255, nullable: true },
-          { name: 'email', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'email', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -1388,8 +1330,8 @@ describe('PHPEntityGenerator', () => {
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
           { name: 'name', type: 'varchar', length: 255, nullable: false },
-          { name: 'email', type: 'varchar', length: 255, nullable: false }
-        ]
+          { name: 'email', type: 'varchar', length: 255, nullable: false },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -1403,8 +1345,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true },
+        ],
       });
 
       const options = { ...defaultOptions, databaseDialect: DatabaseDialect.POSTGRESQL };
@@ -1418,9 +1360,7 @@ describe('PHPEntityGenerator', () => {
 
     it('should handle SQLite dialect', () => {
       const schema = createSchema({
-        columns: [
-          { name: 'id', type: 'int', nullable: false, autoIncrement: true }
-        ]
+        columns: [{ name: 'id', type: 'int', nullable: false, autoIncrement: true }],
       });
 
       const options = { ...defaultOptions, databaseDialect: DatabaseDialect.SQLITE };
@@ -1433,18 +1373,14 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'created', type: 'int', nullable: true }
-        ]
+          { name: 'created', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
         ...defaultOptions,
-        customDataTypes: [
-          { name: 'timestamp', phpType: '\\DateTimeImmutable' }
-        ],
-        columnFieldMappings: [
-          { field: 'createdAt', column: 'created', selectedType: 'timestamp' }
-        ]
+        customDataTypes: [{ name: 'timestamp', phpType: '\\DateTimeImmutable' }],
+        columnFieldMappings: [{ field: 'createdAt', column: 'created', selectedType: 'timestamp' }],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1455,8 +1391,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'user_name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const php = PHPEntityGenerator.generate(schema, defaultOptions);
@@ -1470,8 +1406,8 @@ describe('PHPEntityGenerator', () => {
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
           { name: 'user_id', type: 'int', nullable: true },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1482,16 +1418,16 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
+            joinColumn: 'user_id',
           },
           {
             id: '2',
             field: 'profile',
             type: 'one-to-one',
             targetEntity: 'Profile',
-            joinColumn: 'profile_id'
-          }
-        ]
+            joinColumn: 'profile_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1503,8 +1439,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1516,9 +1452,9 @@ describe('PHPEntityGenerator', () => {
             field: 'user',
             type: 'many-to-one',
             targetEntity: 'User',
-            joinColumn: 'user_id'
-          }
-        ]
+            joinColumn: 'user_id',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1531,8 +1467,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'name', type: 'varchar', length: 255, nullable: true }
-        ]
+          { name: 'name', type: 'varchar', length: 255, nullable: true },
+        ],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
@@ -1547,8 +1483,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'active', type: 'boolean', nullable: true }
-        ]
+          { name: 'active', type: 'boolean', nullable: true },
+        ],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
@@ -1561,8 +1497,8 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'user_id', type: 'int', nullable: true }
-        ]
+          { name: 'user_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1575,9 +1511,9 @@ describe('PHPEntityGenerator', () => {
             type: 'many-to-one',
             targetEntity: 'User',
             joinColumn: 'user_id',
-            cascade: ['persist', 'remove']
-          }
-        ]
+            cascade: ['persist', 'remove'],
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
@@ -1590,14 +1526,14 @@ describe('PHPEntityGenerator', () => {
       const schema = createSchema({
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
-          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true }
-        ]
+          { name: 'count', type: 'int', length: 11, nullable: true, unsigned: true },
+        ],
       });
 
       const options = { ...defaultOptions, useAttributeMapping: true };
       const php = PHPEntityGenerator.generate(schema, options);
 
-      expect(php).toContain('options: [\'unsigned\' => true]');
+      expect(php).toContain("options: ['unsigned' => true]");
     });
   });
 
@@ -1610,11 +1546,9 @@ describe('PHPEntityGenerator', () => {
           { name: 'username', type: 'varchar', length: 50, nullable: false },
           { name: 'email', type: 'varchar', length: 255, nullable: true },
           { name: 'age', type: 'int', length: 11, nullable: true, unsigned: true },
-          { name: 'created_at', type: 'datetime', nullable: true }
+          { name: 'created_at', type: 'datetime', nullable: true },
         ],
-        indexes: [
-          { name: 'idx_username', columns: ['username'], unique: false, primary: false }
-        ]
+        indexes: [{ name: 'idx_username', columns: ['username'], unique: false, primary: false }],
       });
 
       const options: GenerationOptions = {
@@ -1623,12 +1557,8 @@ describe('PHPEntityGenerator', () => {
         entitySuffix: '',
         entityName: '',
         databaseDialect: DatabaseDialect.MYSQL,
-        customDataTypes: [
-          { name: 'timestamp', phpType: '\\DateTimeImmutable' }
-        ],
-        columnFieldMappings: [
-          { field: 'createdAt', column: 'created_at', selectedType: 'timestamp' }
-        ],
+        customDataTypes: [{ name: 'timestamp', phpType: '\\DateTimeImmutable' }],
+        columnFieldMappings: [{ field: 'createdAt', column: 'created_at', selectedType: 'timestamp' }],
         explicitlyDefineColumns: false,
         useAttributeMapping: true,
         publicProperties: false,
@@ -1637,7 +1567,7 @@ describe('PHPEntityGenerator', () => {
         generateFluentSetters: true,
         relationships: [],
         customTraits: [],
-        selectedTraits: []
+        selectedTraits: [],
       };
 
       const php = PHPEntityGenerator.generate(schema, options);
@@ -1647,7 +1577,7 @@ describe('PHPEntityGenerator', () => {
       expect(php).toContain('namespace App\\Entity;');
       expect(php).toContain('class Users');
       expect(php).toContain('#[ORM\\Entity]');
-      expect(php).toContain('#[ORM\\Table(name: \'users\')]');
+      expect(php).toContain("#[ORM\\Table(name: 'users')]");
 
       // Verify constructor with required field
       expect(php).toContain('public function __construct(');
@@ -1661,7 +1591,7 @@ describe('PHPEntityGenerator', () => {
       expect(php).toContain('public function setEmail(?string $email): self');
 
       // Verify unsigned attribute
-      expect(php).toContain('options: [\'unsigned\' => true]');
+      expect(php).toContain("options: ['unsigned' => true]");
     });
 
     it('should handle complex relationship scenario', () => {
@@ -1669,8 +1599,8 @@ describe('PHPEntityGenerator', () => {
         columns: [
           { name: 'id', type: 'int', nullable: false, autoIncrement: true },
           { name: 'user_id', type: 'int', nullable: false },
-          { name: 'profile_id', type: 'int', nullable: true }
-        ]
+          { name: 'profile_id', type: 'int', nullable: true },
+        ],
       });
 
       const options: GenerationOptions = {
@@ -1684,7 +1614,7 @@ describe('PHPEntityGenerator', () => {
             targetEntity: 'User',
             joinColumn: 'user_id',
             fetch: 'EAGER',
-            cascade: ['persist']
+            cascade: ['persist'],
           },
           {
             id: '2',
@@ -1692,16 +1622,16 @@ describe('PHPEntityGenerator', () => {
             type: 'one-to-one',
             targetEntity: 'Profile',
             joinColumn: 'profile_id',
-            orphanRemoval: true
+            orphanRemoval: true,
           },
           {
             id: '3',
             field: 'comments',
             type: 'one-to-many',
             targetEntity: 'Comment',
-            mappedBy: 'post'
-          }
-        ]
+            mappedBy: 'post',
+          },
+        ],
       };
       const php = PHPEntityGenerator.generate(schema, options);
 
