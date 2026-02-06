@@ -9,6 +9,7 @@ describe('DoctrineXMLGenerator', () => {
     entityPrefix: '',
     entitySuffix: '',
     entityName: '',
+    classNamingConvention: 'inherit',
     databaseDialect: DatabaseDialect.MYSQL,
     customDataTypes: [],
     columnFieldMappings: [],
@@ -996,6 +997,7 @@ describe('DoctrineXMLGenerator', () => {
         entityPrefix: '',
         entitySuffix: '',
         entityName: '',
+        classNamingConvention: 'inherit',
         databaseDialect: DatabaseDialect.MYSQL,
         customDataTypes: [{ name: 'timestamp', phpType: '\\DateTimeImmutable' }],
         columnFieldMappings: [

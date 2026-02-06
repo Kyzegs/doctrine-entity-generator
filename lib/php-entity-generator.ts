@@ -1,6 +1,6 @@
 import { TableSchema, TableColumn, GenerationOptions, Relationship } from './types';
 import { ORMMappingUtils, ORMFieldMapping } from './orm-mapping-utils';
-import { toPascalCase } from './utils';
+import { toPascalCase, singularize, pluralize } from './utils';
 import { DatabaseDialect } from './example-queries';
 import { PhpFile, PhpNamespace, ClassType, PsrPrinter, Literal } from 'js-php-generator';
 
@@ -567,8 +567,18 @@ export class PHPEntityGenerator {
       return options.entityName.trim();
     }
 
+    let baseName = tableName;
+
+    // Apply naming convention
+    if (options.classNamingConvention === 'singular') {
+      baseName = singularize(tableName);
+    } else if (options.classNamingConvention === 'plural') {
+      baseName = pluralize(tableName);
+    }
+    // 'inherit' uses the table name as-is
+
     // Convert table name to PascalCase entity name
-    return toPascalCase(tableName);
+    return toPascalCase(baseName);
   }
 
   /**

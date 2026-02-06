@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import pluralizePackage from 'pluralize';
 import { GenerationOptions, GeneratedEntity, ShareableConfiguration } from './types';
 import { prisma } from './prisma';
 
@@ -12,14 +13,25 @@ export function getErrorMessage(err: unknown, fallback = 'An error occurred'): s
 
 /**
  * Compute entity class name from options and table name.
- * Uses options.entityName if set, otherwise prefix + PascalCase(tableName) + suffix.
+ * Uses options.entityName if set, otherwise applies naming convention and prefix/suffix.
  */
 export function computeEntityName(
-  options: Pick<GenerationOptions, 'entityName' | 'entityPrefix' | 'entitySuffix'>,
+  options: Pick<GenerationOptions, 'entityName' | 'entityPrefix' | 'entitySuffix' | 'classNamingConvention'>,
   tableName: string
 ): string {
   if (options.entityName?.trim()) return options.entityName.trim();
-  return options.entityPrefix + toPascalCase(tableName) + options.entitySuffix;
+
+  let baseName = tableName;
+
+  // Apply naming convention
+  if (options.classNamingConvention === 'singular') {
+    baseName = singularize(tableName);
+  } else if (options.classNamingConvention === 'plural') {
+    baseName = pluralize(tableName);
+  }
+  // 'inherit' uses the table name as-is
+
+  return options.entityPrefix + toPascalCase(baseName) + options.entitySuffix;
 }
 
 /** Option keys that are persisted/shared (excludes entityName, relationships, etc.). */
@@ -28,6 +40,7 @@ type ShareableOptionKey = keyof Pick<
   | 'namespace'
   | 'entityPrefix'
   | 'entitySuffix'
+  | 'classNamingConvention'
   | 'customDataTypes'
   | 'columnFieldMappings'
   | 'explicitlyDefineColumns'
@@ -38,6 +51,7 @@ const SHAREABLE_OPTION_KEYS: ShareableOptionKey[] = [
   'namespace',
   'entityPrefix',
   'entitySuffix',
+  'classNamingConvention',
   'customDataTypes',
   'columnFieldMappings',
   'explicitlyDefineColumns',
@@ -221,4 +235,22 @@ export function toPascalCase(str: string): string {
 export function toCamelCase(str: string): string {
   const pascalCase = toPascalCase(str);
   return pascalCase.charAt(0).toLowerCase() + pascalCase.slice(1);
+}
+
+/**
+ * Pluralize a word (converts singular to plural)
+ * Uses the pluralize npm package for accurate pluralization
+ */
+export function pluralize(word: string): string {
+  if (!word) return word;
+  return pluralizePackage.plural(word);
+}
+
+/**
+ * Singularize a word (converts plural to singular)
+ * Uses the pluralize npm package for accurate singularization
+ */
+export function singularize(word: string): string {
+  if (!word) return word;
+  return pluralizePackage.singular(word);
 }

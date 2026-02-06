@@ -84,11 +84,14 @@ export interface TraitProperty {
   hasSetter: boolean;
 }
 
+export type ClassNamingConvention = 'inherit' | 'singular' | 'plural';
+
 export interface GenerationOptions {
   namespace: string;
   entityPrefix: string;
   entitySuffix: string;
   entityName: string; // Manual override for entity name (not shareable)
+  classNamingConvention: ClassNamingConvention; // Controls whether class names are singular/plural/inherit from table
   databaseDialect: DatabaseDialect;
 
   // ORM mapping settings
@@ -117,6 +120,7 @@ export interface ShareableConfiguration {
   namespace: string;
   entityPrefix: string;
   entitySuffix: string;
+  classNamingConvention: ClassNamingConvention;
   customDataTypes: CustomDataType[];
   columnFieldMappings: ColumnFieldMapping[];
   explicitlyDefineColumns: boolean;

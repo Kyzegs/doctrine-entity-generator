@@ -38,6 +38,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
   entityPrefix: '',
   entitySuffix: '',
   entityName: '', // Manual override for entity name (not shareable)
+  classNamingConvention: 'inherit', // Use table name as-is by default
   databaseDialect: DatabaseDialect.MYSQL,
 
   // ORM mapping settings
@@ -340,7 +341,7 @@ export default function Home() {
       const columnName = SQLParser.extractColumnName(column.name);
       const baseName = columnName.replace(/_id$/, '');
 
-      // Convert snake_case to camelCase for field names and PascalCase for entity names
+      // Convert snake_case to camelCasefor field names and PascalCase for entity names
       const fieldName = toCamelCase(baseName);
       const entityName = toPascalCase(baseName);
 

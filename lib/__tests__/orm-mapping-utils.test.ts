@@ -25,6 +25,7 @@ describe('ORMMappingUtils', () => {
     entityPrefix: '',
     entitySuffix: '',
     entityName: '',
+    classNamingConvention: 'inherit',
     databaseDialect: DatabaseDialect.MYSQL,
     customDataTypes: [],
     columnFieldMappings: [],

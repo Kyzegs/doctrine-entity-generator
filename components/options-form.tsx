@@ -92,6 +92,29 @@ function OptionsFormComponent({ options, onChange, hasMultipleTables = false }: 
               placeholder="Leave empty to auto-generate from table name"
             />
           </div>
+
+          <div>
+            <Label htmlFor="classNamingConvention" className="block text-sm font-medium mb-1">
+              Class Naming Convention
+            </Label>
+            <Select
+              value={options.classNamingConvention}
+              onValueChange={(value) => handleInputChange('classNamingConvention', value as any)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select naming convention" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Inherit from table name</SelectItem>
+                <SelectItem value="singular">Singular (e.g., users → User)</SelectItem>
+                <SelectItem value="plural">Plural (e.g., user → Users)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Controls whether entity class names are singular, plural, or inherit directly from the table name
+            </p>
+          </div>
+
           <div>
             <Label htmlFor="namespace" className="block text-sm font-medium mb-1">
               PHP Namespace
