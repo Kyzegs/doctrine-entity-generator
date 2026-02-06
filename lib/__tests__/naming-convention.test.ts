@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PHPEntityGenerator } from '../php-entity-generator';
+import { DoctrineXMLGenerator } from '../doctrine-xml-generator';
 import { SQLParser } from '../sql-parser';
 import { GenerationOptions } from '../types';
 import { DatabaseDialect } from '../example-queries';
@@ -230,6 +231,76 @@ describe('Class Naming Convention', () => {
       const output = PHPEntityGenerator.generate(schema, options);
 
       expect(output).toContain('class BaseUserEntity');
+    });
+  });
+
+  describe('XML mapping entity names', () => {
+    const sql = `
+      CREATE TABLE orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        total DECIMAL(10,2) NOT NULL
+      )
+    `;
+
+    it('should use singular entity name in XML when convention is singular', () => {
+      const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
+      const options = {
+        ...baseOptions,
+        namespace: 'App\\Entity',
+        classNamingConvention: 'singular' as const,
+        useAttributeMapping: false, // Generate XML
+      };
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+
+      // XML should reference the entity as "Order" not "Orders"
+      expect(xml).toContain('name="App\\Entity\\Order"');
+      expect(xml).not.toContain('name="App\\Entity\\Orders"');
+    });
+
+    it('should use plural entity name in XML when convention is plural', () => {
+      const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
+      const options = {
+        ...baseOptions,
+        namespace: 'App\\Entity',
+        classNamingConvention: 'plural' as const,
+        useAttributeMapping: false, // Generate XML
+      };
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+
+      // XML should reference the entity as "Orders"
+      expect(xml).toContain('name="App\\Entity\\Orders"');
+    });
+
+    it('should use inherited entity name in XML when convention is inherit', () => {
+      const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
+      const options = {
+        ...baseOptions,
+        namespace: 'App\\Entity',
+        classNamingConvention: 'inherit' as const,
+        useAttributeMapping: false, // Generate XML
+      };
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+
+      // XML should reference the entity as "Orders" (inherited from table name)
+      expect(xml).toContain('name="App\\Entity\\Orders"');
+    });
+
+    it('should match PHP class name and XML entity name', () => {
+      const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
+      const options = {
+        ...baseOptions,
+        namespace: 'App\\Entity',
+        classNamingConvention: 'singular' as const,
+        useAttributeMapping: false,
+      };
+
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+      const php = PHPEntityGenerator.generate(schema, options);
+
+      // Both should use "Order" (singular)
+      expect(xml).toContain('name="App\\Entity\\Order"');
+      expect(php).toContain('class Order');
+      expect(php).not.toContain('class Orders');
     });
   });
 });
