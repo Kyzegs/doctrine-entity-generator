@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { SQLParser } from '@/lib/sql-parser';
 import { DoctrineXMLGenerator } from '@/lib/doctrine-xml-generator';
 import { PHPEntityGenerator } from '@/lib/php-entity-generator';
@@ -87,7 +87,10 @@ export default function Home() {
   const [relationshipSuggestions, setRelationshipSuggestions] = useState<any[]>([]);
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkEntities, setBulkEntities] = useState<GeneratedEntity[]>([]);
-  const [hasMultipleTables, setHasMultipleTables] = useState(false);
+  const hasMultipleTables = useMemo(() => {
+    const createTableCount = (sqlInput.match(/create\s+table/gi) || []).length;
+    return createTableCount > 1;
+  }, [sqlInput]);
   const [savedRelationships, setSavedRelationships] = useState<Relationship[]>([]);
   const [savedTraits, setSavedTraits] = useState<string[]>([]);
 
@@ -100,20 +103,22 @@ export default function Home() {
 
   // Load from localStorage after hydration
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Partial<ShareableConfiguration>;
-        const merged = { ...DEFAULT_OPTIONS, ...mergeShareableConfigIntoOptions(parsed) };
-        setOptions(merged);
-      } catch {
-        console.warn('Failed to parse saved config, using defaults');
+    queueMicrotask(() => {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as Partial<ShareableConfiguration>;
+          const merged = { ...DEFAULT_OPTIONS, ...mergeShareableConfigIntoOptions(parsed) };
+          setOptions(merged);
+        } catch {
+          console.warn('Failed to parse saved config, using defaults');
+          setOptions(DEFAULT_OPTIONS);
+        }
+      } else {
         setOptions(DEFAULT_OPTIONS);
       }
-    } else {
-      setOptions(DEFAULT_OPTIONS);
-    }
-    setIsHydrated(true);
+      setIsHydrated(true);
+    });
   }, []);
 
   const updateSqlForDialect = (dialectName: string) => {
@@ -246,68 +251,62 @@ export default function Home() {
     event.target.value = '';
   };
 
-  // Function to detect multiple CREATE TABLE statements
-  const detectMultipleTables = (sql: string) => {
-    const createTableCount = (sql.match(/create\s+table/gi) || []).length;
-    const hasMultiple = createTableCount > 1;
-    setHasMultipleTables(hasMultiple);
-    return hasMultiple;
-  };
+  const relationshipIdSeq = useRef(0);
 
   // Update multiple tables detection when SQL input changes
   // Effect intentionally only depends on sqlInput to trigger when SQL changes
   // It captures current values of options, savedRelationships, and savedTraits at that moment
   useEffect(() => {
-    const hasMultiple = detectMultipleTables(sqlInput);
+    queueMicrotask(() => {
+      if (hasMultipleTables) {
+        // Clear relationship suggestions so they can't be used in bulk mode
+        setRelationshipSuggestions([]);
 
-    if (hasMultiple) {
-      // Clear relationship suggestions so they can't be used in bulk mode
-      setRelationshipSuggestions([]);
+        // Save current relationships and traits before clearing
+        if (options.relationships.length > 0 || options.selectedTraits.length > 0) {
+          setSavedRelationships([...options.relationships]);
+          setSavedTraits([...options.selectedTraits]);
 
-      // Save current relationships and traits before clearing
-      if (options.relationships.length > 0 || options.selectedTraits.length > 0) {
-        setSavedRelationships([...options.relationships]);
-        setSavedTraits([...options.selectedTraits]);
+          const clearedOptions = {
+            ...options,
+            relationships: [],
+            selectedTraits: [],
+          };
+          setOptions(clearedOptions);
+          saveOptionsToLocalStorage(clearedOptions);
 
-        const clearedOptions = {
-          ...options,
-          relationships: [],
-          selectedTraits: [],
-        };
-        setOptions(clearedOptions);
-        saveOptionsToLocalStorage(clearedOptions);
+          // Show notification about cleared configurations
+          const clearedItems = [];
+          if (options.relationships.length > 0) clearedItems.push('relationships');
+          if (options.selectedTraits.length > 0) clearedItems.push('traits');
 
-        // Show notification about cleared configurations
-        const clearedItems = [];
-        if (options.relationships.length > 0) clearedItems.push('relationships');
-        if (options.selectedTraits.length > 0) clearedItems.push('traits');
+          toast.info('Configurations Cleared', {
+            description: `Previous ${clearedItems.join(' and ')} have been cleared for bulk generation.`,
+          });
+        }
+      } else {
+        // Restore saved relationships and traits when switching back to single table
+        if (savedRelationships.length > 0 || savedTraits.length > 0) {
+          const restoredOptions = {
+            ...options,
+            relationships: savedRelationships,
+            selectedTraits: savedTraits,
+          };
+          setOptions(restoredOptions);
+          saveOptionsToLocalStorage(restoredOptions);
 
-        toast.info('Configurations Cleared', {
-          description: `Previous ${clearedItems.join(' and ')} have been cleared for bulk generation.`,
-        });
+          // Clear saved configurations
+          setSavedRelationships([]);
+          setSavedTraits([]);
+
+          toast.success('Configurations Restored', {
+            description: 'Previous relationships and traits have been restored.',
+          });
+        }
       }
-    } else {
-      // Restore saved relationships and traits when switching back to single table
-      if (savedRelationships.length > 0 || savedTraits.length > 0) {
-        const restoredOptions = {
-          ...options,
-          relationships: savedRelationships,
-          selectedTraits: savedTraits,
-        };
-        setOptions(restoredOptions);
-        saveOptionsToLocalStorage(restoredOptions);
-
-        // Clear saved configurations
-        setSavedRelationships([]);
-        setSavedTraits([]);
-
-        toast.success('Configurations Restored', {
-          description: 'Previous relationships and traits have been restored.',
-        });
-      }
-    }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sqlInput]);
+  }, [sqlInput, hasMultipleTables]);
 
   const suggestRelationships = (schema: any) => {
     const suggestions: any[] = [];
@@ -361,8 +360,9 @@ export default function Home() {
   };
 
   const addSuggestedRelationship = (suggestion: any) => {
+    relationshipIdSeq.current += 1;
     const newRelationship = {
-      id: `relationship-${Date.now()}-${suggestion.field}`,
+      id: `relationship-${relationshipIdSeq.current}-${suggestion.field}`,
       field: suggestion.field,
       type: suggestion.type,
       targetEntity: suggestion.targetEntity,

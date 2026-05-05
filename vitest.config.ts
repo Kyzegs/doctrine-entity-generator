@@ -3,6 +3,10 @@ import path from 'path';
 
 export default defineConfig({
   test: {
+    env: {
+      // Prisma 7 requires a connection string for client construction; tests do not hit the DB.
+      DATABASE_URL: 'postgresql://127.0.0.1:5432/vitest_placeholder',
+    },
     globals: true,
     environment: 'node',
     include: ['**/__tests__/**/*.test.ts'],
