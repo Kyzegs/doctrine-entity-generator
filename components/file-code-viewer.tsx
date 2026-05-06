@@ -2,10 +2,15 @@
 
 import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/button';
 import { FileCode, FileJson, Database, Share2, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  islandsDarkColors,
+  islandsDarkLineNumberStyle,
+  islandsDarkPrism,
+  islandsDarkTypography,
+} from '@/lib/islands-dark-editor-theme';
 
 export interface CodeFile {
   id: string;
@@ -164,15 +169,19 @@ export function FileCodeViewer({
           {activeFile && (
             <SyntaxHighlighter
               language={getLanguage(activeFile.language)}
-              style={tomorrow}
+              style={islandsDarkPrism}
               customStyle={{
                 margin: 0,
                 borderRadius: 0,
-                fontSize: '0.875rem',
-                lineHeight: 1.6,
+                backgroundColor: islandsDarkColors.editorBackground,
+                color: islandsDarkColors.editorForeground,
+                fontFamily: islandsDarkTypography.fontFamily,
+                fontSize: islandsDarkTypography.fontSize,
+                lineHeight: islandsDarkTypography.lineHeight,
                 padding: '1rem 1.25rem',
                 minHeight: '100%',
               }}
+              lineNumberStyle={islandsDarkLineNumberStyle}
               showLineNumbers
               wrapLines
             >

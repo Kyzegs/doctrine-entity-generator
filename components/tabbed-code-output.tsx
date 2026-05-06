@@ -2,11 +2,16 @@
 
 import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Share2 } from 'lucide-react';
+import {
+  islandsDarkColors,
+  islandsDarkLineNumberStyle,
+  islandsDarkPrism,
+  islandsDarkTypography,
+} from '@/lib/islands-dark-editor-theme';
 
 interface CodeTab {
   id: string;
@@ -99,13 +104,17 @@ export function TabbedCodeOutput({
             <div className="overflow-x-auto">
               <SyntaxHighlighter
                 language={getLanguage(tab.language)}
-                style={tomorrow}
+                style={islandsDarkPrism}
                 customStyle={{
                   margin: 0,
                   borderRadius: 0,
-                  fontSize: '0.875rem',
-                  lineHeight: '1.5',
+                  backgroundColor: islandsDarkColors.editorBackground,
+                  color: islandsDarkColors.editorForeground,
+                  fontFamily: islandsDarkTypography.fontFamily,
+                  fontSize: islandsDarkTypography.fontSize,
+                  lineHeight: islandsDarkTypography.lineHeight,
                 }}
+                lineNumberStyle={islandsDarkLineNumberStyle}
                 showLineNumbers={true}
                 wrapLines={true}
               >

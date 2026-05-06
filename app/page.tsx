@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql, MySQL, PostgreSQL, SQLite } from '@codemirror/lang-sql';
-import { tomorrowNight } from '@/lib/codemirror-theme-tomorrow-night';
+import { islandsDarkCodeMirror } from '@/lib/islands-dark-editor-theme';
 import { toast } from 'sonner';
 import {
   createShareUrl,
@@ -642,7 +642,7 @@ export default function Home() {
                 </div>
                 <div
                   id="sql-input"
-                  className="flex w-full min-h-64 resize-y flex-col rounded-md border border-input overflow-hidden [&>div]:min-h-0 [&>div]:flex-1 [&_.cm-editor]:outline-none [&_.cm-editor]:h-full [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto [&_.cm-scroller]:font-mono [&_.cm-scroller]:text-sm [&_.cm-scroller]:min-h-0"
+                  className="flex w-full min-h-64 resize-y flex-col rounded-md border border-input overflow-hidden [&>div]:min-h-0 [&>div]:flex-1 [&_.cm-editor]:outline-none [&_.cm-editor]:h-full [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto [&_.cm-scroller]:min-h-0"
                   style={{ height: '16rem' }}
                 >
                   <CodeMirror
@@ -651,9 +651,14 @@ export default function Home() {
                     height="100%"
                     minHeight="16rem"
                     theme="none"
-                    extensions={[...sqlEditorExtensions, ...tomorrowNight]}
+                    extensions={[...sqlEditorExtensions, ...islandsDarkCodeMirror]}
                     placeholder="Paste your CREATE TABLE statement here or upload a .sql file..."
-                    basicSetup={{ lineNumbers: true, foldGutter: false }}
+                    basicSetup={{
+                      lineNumbers: true,
+                      foldGutter: false,
+                      drawSelection: false,
+                      highlightActiveLine: false,
+                    }}
                   />
                 </div>
               </div>
