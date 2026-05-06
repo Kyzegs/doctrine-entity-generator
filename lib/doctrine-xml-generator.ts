@@ -145,7 +145,7 @@ export class DoctrineXMLGenerator {
 
     // Add enum class if specified
     if (field.enumClass) {
-      fieldElement.att('enum-type', field.enumClass);
+      fieldElement.att('enum-type', this.qualifyEnumClass(field.enumClass, options));
     }
 
     // Check if we need to add options (unsigned or default)
@@ -187,6 +187,14 @@ export class DoctrineXMLGenerator {
         optionsElement.ele(doctrineNs, 'option').att('name', 'unsigned').txt('true');
       }
     }
+  }
+
+  private static qualifyEnumClass(enumClass: string, options: GenerationOptions): string {
+    if (!options.namespace || enumClass.includes('\\')) {
+      return enumClass;
+    }
+
+    return `${options.namespace}\\${enumClass}`;
   }
 
   private static getEntityName(tableName: string, options: GenerationOptions): string {

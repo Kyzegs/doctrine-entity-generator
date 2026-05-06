@@ -56,6 +56,7 @@ const DEFAULT_OPTIONS: GenerationOptions = {
   ],
   explicitlyDefineColumns: false,
   useAttributeMapping: false,
+  generateEnumsFromSql: false,
 
   // PHP Entity Class settings
   publicProperties: false,
@@ -82,6 +83,7 @@ export default function Home() {
   const [options, setOptions] = useState<GenerationOptions>(DEFAULT_OPTIONS);
   const [xmlOutput, setXmlOutput] = useState('');
   const [phpOutput, setPhpOutput] = useState('');
+  const [phpEnumOutputs, setPhpEnumOutputs] = useState<GeneratedEntity['phpEnumOutputs']>([]);
   const [generatedEntityName, setGeneratedEntityName] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [relationshipSuggestions, setRelationshipSuggestions] = useState<any[]>([]);
@@ -176,6 +178,7 @@ export default function Home() {
         columnFieldMappings: importedConfig.columnFieldMappings,
         explicitlyDefineColumns: importedConfig.explicitlyDefineColumns,
         useAttributeMapping: importedConfig.useAttributeMapping,
+        generateEnumsFromSql: importedConfig.generateEnumsFromSql ?? DEFAULT_OPTIONS.generateEnumsFromSql,
         customTraits: importedConfig.customTraits,
       };
 
@@ -402,6 +405,7 @@ export default function Home() {
                 entityName: computeEntityName(options, tableName),
                 xmlOutput: xmlOutput || undefined,
                 phpOutput: phpOutput ?? '',
+                phpEnumOutputs,
                 hasError: false,
               };
             })(),
@@ -453,12 +457,14 @@ export default function Home() {
           }
 
           const phpOutput = PHPEntityGenerator.generate(schema, bulkOptions);
+          const phpEnumOutputs = PHPEntityGenerator.generateEnums(schema, bulkOptions);
 
           entities.push({
             tableName: schema.name,
             entityName,
             xmlOutput,
             phpOutput,
+            phpEnumOutputs,
             hasError: false,
           });
         } catch (err) {
@@ -476,6 +482,7 @@ export default function Home() {
       setBulkEntities(entities);
       setIsBulkMode(true);
       setGeneratedEntityName(null);
+      setPhpEnumOutputs([]);
 
       const successCount = entities.filter((e) => !e.hasError).length;
       const failCount = entities.filter((e) => e.hasError).length;
@@ -511,6 +518,7 @@ export default function Home() {
 
       // Single table mode
       setIsBulkMode(false);
+      setPhpEnumOutputs([]);
 
       // Parse the SQL with the selected database dialect
       const schema = SQLParser.parseCreateTable(sqlInput, options.databaseDialect);
@@ -545,7 +553,9 @@ export default function Home() {
 
       // Generate PHP entity class
       const php = PHPEntityGenerator.generate(schema, options);
+      const generatedPhpEnumOutputs = PHPEntityGenerator.generateEnums(schema, options);
       setPhpOutput(php);
+      setPhpEnumOutputs(generatedPhpEnumOutputs);
     } catch (err) {
       console.error('Error generating code:', err);
       toast.error('Code Generation Failed', {
@@ -687,6 +697,7 @@ export default function Home() {
                             entityName: generatedEntityName ?? 'Entity',
                             xmlOutput: xmlOutput || undefined,
                             phpOutput: phpOutput ?? '',
+                            phpEnumOutputs,
                             hasError: false,
                           },
                         ]

@@ -1,10 +1,11 @@
 import JSZip from 'jszip';
-import { GeneratedEntity } from './types';
+import { GeneratedEntity, GeneratedPhpEnumOutput } from './types';
 
 export interface EntityForZip {
   entityName: string;
   xmlOutput?: string;
   phpOutput: string;
+  phpEnumOutputs?: GeneratedPhpEnumOutput[];
 }
 
 /**
@@ -19,6 +20,9 @@ export async function createBulkEntitiesZip(entities: EntityForZip[]): Promise<B
       zip.file(`${entity.entityName}.orm.xml`, entity.xmlOutput);
     }
     zip.file(`${entity.entityName}.php`, entity.phpOutput);
+    for (const enumOutput of entity.phpEnumOutputs || []) {
+      zip.file(enumOutput.fileName, enumOutput.phpOutput);
+    }
   }
 
   return zip.generateAsync({ type: 'blob' });

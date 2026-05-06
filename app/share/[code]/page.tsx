@@ -22,6 +22,7 @@ function extractEntityInfo(sharedData: ShareableCode): {
     entityName = first.entityName;
     tableName = first.tableName;
     if (first.phpOutput) codeTypes.push('PHP Entity');
+    if (first.phpEnumOutputs?.length) codeTypes.push('PHP Enums');
     if (first.xmlOutput) codeTypes.push('XML Mapping');
   }
 

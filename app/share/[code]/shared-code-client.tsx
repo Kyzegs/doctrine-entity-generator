@@ -121,6 +121,7 @@ export function SharedCodeClient() {
                   sharedData.entities.length > 1 ? `${sharedData.entities.length} Entities` : null,
                   sharedData.entities.length === 1 && sharedData.entities[0]?.xmlOutput && 'XML Mapping',
                   sharedData.entities.length === 1 && sharedData.entities[0]?.phpOutput && 'PHP Entity',
+                  sharedData.entities.length === 1 && sharedData.entities[0]?.phpEnumOutputs?.length && 'PHP Enums',
                   sharedData.sqlInput && 'Original SQL',
                 ]
                   .filter(Boolean)

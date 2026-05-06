@@ -185,6 +185,7 @@ export class SQLParser {
       name,
       type: typeInfo.type,
       length: typeInfo.length,
+      enumValues: typeInfo.enumValues,
       nullable,
       autoIncrement,
       unsigned,
@@ -197,6 +198,7 @@ export class SQLParser {
     type: string;
     length?: number;
     unsigned?: boolean;
+    enumValues?: string[];
   } {
     if (!dataType || !dataType.dataType) {
       return { type: 'unknown', length: undefined, unsigned: undefined };
@@ -212,8 +214,22 @@ export class SQLParser {
 
     // Check for unsigned in suffix array
     const unsigned = Array.isArray(dataType.suffix) && dataType.suffix.includes('UNSIGNED');
+    const enumValues = this.extractEnumValues(dataType);
 
-    return { type, length, unsigned };
+    return { type, length, unsigned, enumValues };
+  }
+
+  private static extractEnumValues(dataType: any): string[] | undefined {
+    if (String(dataType.dataType).toLowerCase() !== 'enum') {
+      return undefined;
+    }
+
+    const values = dataType.expr?.value;
+    if (!Array.isArray(values)) {
+      return undefined;
+    }
+
+    return values.map((value) => String(value.value));
   }
 
   private static hasAttribute(def: any, attribute: string): boolean {

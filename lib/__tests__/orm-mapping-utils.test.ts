@@ -31,6 +31,7 @@ describe('ORMMappingUtils', () => {
     columnFieldMappings: [],
     explicitlyDefineColumns: false,
     useAttributeMapping: false,
+    generateEnumsFromSql: false,
     publicProperties: false,
     generateGetters: true,
     generateSetters: true,
@@ -486,6 +487,25 @@ describe('ORMMappingUtils', () => {
       const mapping = ORMMappingUtils.createORMMapping(schema, options);
       expect(mapping.fields[0].phpType).toBe('StatusEnum');
       expect(mapping.fields[0].enumClass).toBe('StatusEnum');
+    });
+
+    it('should use generated enum class for SQL enum columns when enabled', () => {
+      const options: GenerationOptions = { ...defaultOptions, generateEnumsFromSql: true };
+      const schema = createSchema({
+        columns: [
+          createColumn({
+            name: 'status',
+            type: 'enum',
+            enumValues: ['pending', 'paid'],
+            nullable: false,
+          }),
+        ],
+      });
+
+      const mapping = ORMMappingUtils.createORMMapping(schema, options);
+
+      expect(mapping.fields[0].phpType).toBe('TestTableStatusEnum');
+      expect(mapping.fields[0].enumClass).toBe('TestTableStatusEnum');
     });
 
     it('should use custom data type by field name', () => {

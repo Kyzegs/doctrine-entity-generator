@@ -337,6 +337,7 @@ describe('SQLParser', () => {
       const schema = SQLParser.parseCreateTable(sql, DatabaseDialect.MYSQL);
 
       expect(schema.columns[0].type.toLowerCase()).toBe('enum');
+      expect(schema.columns[0].enumValues).toEqual(['pending', 'paid', 'shipped']);
     });
 
     it('should handle column without definition', () => {

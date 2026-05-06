@@ -35,11 +35,7 @@ const tomorrowNightTheme = EditorView.theme(
       backgroundColor: background,
     },
     '.cm-content': {
-      backgroundColor: background,
       caretColor: cursor,
-    },
-    '.cm-line': {
-      backgroundColor: background,
     },
     '.cm-cursor, .cm-dropCursor': { borderLeftColor: cursor },
     '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':

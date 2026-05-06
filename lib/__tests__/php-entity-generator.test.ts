@@ -15,6 +15,7 @@ describe('PHPEntityGenerator', () => {
     columnFieldMappings: [],
     explicitlyDefineColumns: false,
     useAttributeMapping: false,
+    generateEnumsFromSql: false,
     publicProperties: false,
     generateGetters: true,
     generateSetters: true,
@@ -302,6 +303,75 @@ describe('PHPEntityGenerator', () => {
       const php = PHPEntityGenerator.generate(schema, options);
 
       expect(php).toContain("enumType: 'StatusEnum'");
+    });
+
+    it('should add generated enum type to column attribute for SQL enum columns', () => {
+      const schema = createSchema({
+        name: 'payment_setting_configurations',
+        columns: [
+          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
+          {
+            name: 'type',
+            type: 'enum',
+            enumValues: ['STRING', 'INTEGER'],
+            nullable: false,
+            autoIncrement: false,
+          },
+        ],
+      });
+
+      const options = {
+        ...defaultOptions,
+        useAttributeMapping: true,
+        generateEnumsFromSql: true,
+        classNamingConvention: 'singular' as const,
+      };
+      const php = PHPEntityGenerator.generate(schema, options);
+
+      expect(php).toContain('PaymentSettingConfigurationTypeEnum $type');
+      expect(php).toContain("enumType: 'PaymentSettingConfigurationTypeEnum'");
+    });
+
+    it('should generate string-backed enum files for SQL enum columns', () => {
+      const schema = createSchema({
+        name: 'payment_setting_configurations',
+        columns: [
+          {
+            name: 'type',
+            type: 'enum',
+            enumValues: ['STRING', 'INTEGER', 'json-value', '1st'],
+            nullable: false,
+            autoIncrement: false,
+          },
+        ],
+      });
+
+      const options = { ...defaultOptions, generateEnumsFromSql: true, classNamingConvention: 'singular' as const };
+      const enums = PHPEntityGenerator.generateEnums(schema, options);
+
+      expect(enums).toHaveLength(1);
+      expect(enums[0].className).toBe('PaymentSettingConfigurationTypeEnum');
+      expect(enums[0].fileName).toBe('PaymentSettingConfigurationTypeEnum.php');
+      expect(enums[0].phpOutput).toContain('namespace App\\Entity;');
+      expect(enums[0].phpOutput).toContain('enum PaymentSettingConfigurationTypeEnum: string');
+      expect(enums[0].phpOutput).toContain("case STRING = 'STRING';");
+      expect(enums[0].phpOutput).toContain("case JSON_VALUE = 'json-value';");
+      expect(enums[0].phpOutput).toContain("case VALUE_1ST = '1st';");
+    });
+
+    it('should generate entity-prefixed enum class names for multiple schemas', () => {
+      const options = { ...defaultOptions, generateEnumsFromSql: true };
+      const paymentSchema = createSchema({
+        name: 'payments',
+        columns: [{ name: 'status', type: 'enum', enumValues: ['paid'], nullable: false, autoIncrement: false }],
+      });
+      const orderSchema = createSchema({
+        name: 'orders',
+        columns: [{ name: 'status', type: 'enum', enumValues: ['paid'], nullable: false, autoIncrement: false }],
+      });
+
+      expect(PHPEntityGenerator.generateEnums(paymentSchema, options)[0].className).toBe('PaymentsStatusEnum');
+      expect(PHPEntityGenerator.generateEnums(orderSchema, options)[0].className).toBe('OrdersStatusEnum');
     });
 
     it('should include column name in attribute when explicitlyDefineColumns is true', () => {
@@ -1629,6 +1699,7 @@ describe('PHPEntityGenerator', () => {
         columnFieldMappings: [{ field: 'createdAt', column: 'created_at', selectedType: 'timestamp' }],
         explicitlyDefineColumns: false,
         useAttributeMapping: true,
+        generateEnumsFromSql: false,
         publicProperties: false,
         generateGetters: true,
         generateSetters: true,

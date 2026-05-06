@@ -1,5 +1,5 @@
 import { TableSchema, TableColumn, GenerationOptions } from './types';
-import { toCamelCase } from './utils';
+import { pluralize, singularize, toCamelCase, toPascalCase } from './utils';
 
 export interface ORMFieldMapping {
   name: string;
@@ -86,7 +86,7 @@ export class ORMMappingUtils {
       }
 
       // Determine PHP type
-      let phpType = this.mapToPHPType(column, options);
+      let phpType = this.mapToPHPType(column, options, schema.name);
       if (customMapping?.selectedType) {
         const customDataType = options.customDataTypes.find((dt) => dt.name === customMapping.selectedType);
         if (customDataType) {
@@ -96,9 +96,14 @@ export class ORMMappingUtils {
         }
       }
 
-      // Override with enum class if specified
-      if (customMapping?.enumClass) {
-        phpType = customMapping.enumClass;
+      let enumClass = customMapping?.enumClass;
+      if (!enumClass && this.shouldGenerateEnumForColumn(column, options)) {
+        enumClass = this.getGeneratedEnumClassName(column, schema.name, options);
+      }
+
+      // Override with enum class if specified or generated
+      if (enumClass) {
+        phpType = enumClass;
       }
 
       fields.push({
@@ -109,7 +114,7 @@ export class ORMMappingUtils {
         nullable: column.nullable,
         isRequired: !column.nullable,
         length: column.length,
-        enumClass: customMapping?.enumClass,
+        enumClass,
         isTimestamp,
         isByField,
         isRelationship: false,
@@ -198,11 +203,17 @@ export class ORMMappingUtils {
   /**
    * Maps SQL column type to PHP type
    */
-  static mapToPHPType(column: TableColumn, options: GenerationOptions): string {
+  static mapToPHPType(column: TableColumn, options: GenerationOptions, tableName?: string): string {
     const fieldName = this.getFieldName(column.name, options);
 
     // Check for custom type mapping first
-    const customMapping = options.columnFieldMappings.find((mapping) => mapping.field === fieldName);
+    let customMapping = options.columnFieldMappings.find((mapping) => mapping.field === fieldName);
+    if (!customMapping && column.name) {
+      customMapping = options.columnFieldMappings.find((mapping) => mapping.column === column.name);
+    }
+    if (customMapping?.enumClass) {
+      return customMapping.enumClass;
+    }
     if (customMapping?.selectedType) {
       const customDataType = options.customDataTypes.find((dt) => dt.name === customMapping.selectedType);
       if (customDataType) {
@@ -216,6 +227,10 @@ export class ORMMappingUtils {
     const customDataType = options.customDataTypes.find((dt) => dt.name === fieldName);
     if (customDataType) {
       return customDataType.phpType;
+    }
+
+    if (tableName && this.shouldGenerateEnumForColumn(column, options)) {
+      return this.getGeneratedEnumClassName(column, tableName, options);
     }
 
     const type = column.type.toLowerCase();
@@ -253,6 +268,35 @@ export class ORMMappingUtils {
       default:
         return 'string';
     }
+  }
+
+  static shouldGenerateEnumForColumn(column: TableColumn, options: GenerationOptions): boolean {
+    return !!(
+      options.generateEnumsFromSql &&
+      column.type.toLowerCase() === 'enum' &&
+      column.enumValues &&
+      column.enumValues.length > 0
+    );
+  }
+
+  static getGeneratedEnumClassName(column: TableColumn, tableName: string, options: GenerationOptions): string {
+    const entityName = this.getEntityName(tableName, options);
+    return `${entityName}${toPascalCase(this.getFieldName(column.name, options))}Enum`;
+  }
+
+  private static getEntityName(tableName: string, options: GenerationOptions): string {
+    if (options.entityName && options.entityName.trim()) {
+      return `${options.entityPrefix}${options.entityName.trim()}${options.entitySuffix}`;
+    }
+
+    let baseName = tableName;
+    if (options.classNamingConvention === 'singular') {
+      baseName = singularize(tableName);
+    } else if (options.classNamingConvention === 'plural') {
+      baseName = pluralize(tableName);
+    }
+
+    return `${options.entityPrefix}${toPascalCase(baseName)}${options.entitySuffix}`;
   }
 
   /**

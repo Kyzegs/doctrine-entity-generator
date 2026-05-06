@@ -15,6 +15,7 @@ describe('DoctrineXMLGenerator', () => {
     columnFieldMappings: [],
     explicitlyDefineColumns: false,
     useAttributeMapping: false,
+    generateEnumsFromSql: false,
     publicProperties: false,
     generateGetters: true,
     generateSetters: true,
@@ -328,7 +329,55 @@ describe('DoctrineXMLGenerator', () => {
 
       const xml = DoctrineXMLGenerator.generate(schema, options);
 
-      expect(xml).toContain('enum-type="StatusEnum"');
+      expect(xml).toContain('enum-type="App\\Entity\\StatusEnum"');
+    });
+
+    it('should generate field with generated enum type for SQL enum columns', () => {
+      const schema = createSchema({
+        name: 'payment_setting_configurations',
+        columns: [
+          { name: 'id', type: 'int', nullable: false, autoIncrement: true },
+          {
+            name: 'type',
+            type: 'enum',
+            enumValues: ['STRING', 'INTEGER'],
+            nullable: false,
+            autoIncrement: false,
+          },
+        ],
+      });
+
+      const options = { ...defaultOptions, generateEnumsFromSql: true, classNamingConvention: 'singular' as const };
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+
+      expect(xml).toContain('enum-type="App\\Entity\\PaymentSettingConfigurationTypeEnum"');
+    });
+
+    it('should generate field with namespaced enum type for SQL enum columns', () => {
+      const schema = createSchema({
+        name: 'orders',
+        columns: [
+          { name: 'id', type: 'bigint', nullable: false, autoIncrement: true, unsigned: true },
+          {
+            name: 'status',
+            type: 'enum',
+            enumValues: ['pending', 'paid', 'shipped'],
+            nullable: false,
+            autoIncrement: false,
+            default: 'pending',
+          },
+        ],
+      });
+
+      const options = {
+        ...defaultOptions,
+        namespace: 'AntiCorruptionLayer\\Tinpay\\Entity',
+        generateEnumsFromSql: true,
+        classNamingConvention: 'singular' as const,
+      };
+      const xml = DoctrineXMLGenerator.generate(schema, options);
+
+      expect(xml).toContain('enum-type="AntiCorruptionLayer\\Tinpay\\Entity\\OrderStatusEnum"');
     });
 
     it('should include column attribute when explicitlyDefineColumns is true', () => {
@@ -1006,6 +1055,7 @@ describe('DoctrineXMLGenerator', () => {
         ],
         explicitlyDefineColumns: false,
         useAttributeMapping: false,
+        generateEnumsFromSql: false,
         publicProperties: false,
         generateGetters: true,
         generateSetters: true,

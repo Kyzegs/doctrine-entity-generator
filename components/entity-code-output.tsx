@@ -47,6 +47,13 @@ function buildFilesFromEntities(entities: GeneratedEntity[], sqlInput?: string):
           },
         ]
       : []),
+    ...(entity.phpEnumOutputs || []).map((enumOutput) => ({
+      id: `${entity.entityName}-${enumOutput.className}-php-enum`,
+      title: 'PHP Enum',
+      code: enumOutput.phpOutput,
+      language: 'php',
+      fileName: enumOutput.fileName,
+    })),
   ]);
   if (sqlInput) {
     files.push({

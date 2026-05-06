@@ -4,6 +4,7 @@ export interface TableColumn {
   name: string;
   type: string;
   length?: number;
+  enumValues?: string[];
   nullable: boolean;
   autoIncrement: boolean;
   default?: string;
@@ -99,6 +100,7 @@ export interface GenerationOptions {
   columnFieldMappings: ColumnFieldMapping[];
   explicitlyDefineColumns: boolean;
   useAttributeMapping: boolean; // Use Doctrine attributes instead of XML mapping
+  generateEnumsFromSql: boolean;
 
   // PHP Entity Class settings
   publicProperties: boolean;
@@ -125,7 +127,14 @@ export interface ShareableConfiguration {
   columnFieldMappings: ColumnFieldMapping[];
   explicitlyDefineColumns: boolean;
   useAttributeMapping: boolean;
+  generateEnumsFromSql: boolean;
   customTraits: CustomTrait[];
+}
+
+export interface GeneratedPhpEnumOutput {
+  className: string;
+  fileName: string;
+  phpOutput: string;
 }
 
 export interface Preset {
@@ -142,6 +151,7 @@ export interface GeneratedEntity {
   entityName: string;
   xmlOutput?: string;
   phpOutput: string;
+  phpEnumOutputs?: GeneratedPhpEnumOutput[];
   hasError: boolean;
   errorMessage?: string;
 }

@@ -207,6 +207,19 @@ function OptionsFormComponent({ options, onChange, hasMultipleTables = false }: 
             </div>
           </div>
 
+          <div>
+            <div className="flex items-center">
+              <Checkbox
+                id="generateEnumsFromSql"
+                checked={options.generateEnumsFromSql}
+                onCheckedChange={(checked) => handleInputChange('generateEnumsFromSql', checked)}
+              />
+              <Label htmlFor="generateEnumsFromSql" className="ml-2 text-sm">
+                Generate PHP enums from SQL ENUM columns
+              </Label>
+            </div>
+          </div>
+
           {/* Column-Field Mappings */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Column-Field Mappings</label>

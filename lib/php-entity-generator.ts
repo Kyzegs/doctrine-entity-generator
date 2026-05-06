@@ -1,4 +1,4 @@
-import { TableSchema, TableColumn, GenerationOptions, Relationship } from './types';
+import { TableSchema, TableColumn, GenerationOptions, Relationship, GeneratedPhpEnumOutput } from './types';
 import { ORMMappingUtils, ORMFieldMapping } from './orm-mapping-utils';
 import { toPascalCase, singularize, pluralize } from './utils';
 import { DatabaseDialect } from './example-queries';
@@ -108,6 +108,78 @@ export class PHPEntityGenerator {
     return printer.printFile(file);
   }
 
+  static generateEnums(schema: TableSchema, options: GenerationOptions): GeneratedPhpEnumOutput[] {
+    if (!options.generateEnumsFromSql) {
+      return [];
+    }
+
+    const outputs: GeneratedPhpEnumOutput[] = [];
+    for (const column of schema.columns) {
+      if (!ORMMappingUtils.shouldGenerateEnumForColumn(column, options)) {
+        continue;
+      }
+
+      const fieldName = ORMMappingUtils.getFieldName(column.name, options);
+      const customMapping =
+        options.columnFieldMappings.find((mapping) => mapping.field === fieldName) ||
+        options.columnFieldMappings.find((mapping) => mapping.column === column.name);
+
+      if (customMapping?.enumClass) {
+        continue;
+      }
+
+      const className = ORMMappingUtils.getGeneratedEnumClassName(column, schema.name, options);
+      outputs.push({
+        className,
+        fileName: `${className}.php`,
+        phpOutput: this.generateEnumFile(className, column.enumValues || [], options.namespace),
+      });
+    }
+
+    return outputs;
+  }
+
+  private static generateEnumFile(className: string, values: string[], namespace: string): string {
+    const file = new PhpFile();
+    file.setStrictTypes();
+    const enum_ = file.addEnum(className);
+    enum_.setType('string');
+
+    const usedCaseNames = new Set<string>();
+    for (const value of values) {
+      enum_.addCase(this.createEnumCaseName(value, usedCaseNames), value);
+    }
+
+    const printer = new PsrPrinter();
+    printer.linesBetweenMethods = 1;
+    const php = printer.printFile(file);
+
+    if (!namespace) {
+      return php;
+    }
+
+    return php.replace('declare(strict_types=1);\n\n', `declare(strict_types=1);\n\nnamespace ${namespace};\n\n`);
+  }
+
+  private static createEnumCaseName(value: string, usedCaseNames: Set<string>): string {
+    const normalized = value
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    const baseName = normalized === '' ? 'VALUE' : /^[0-9]/.test(normalized) ? `VALUE_${normalized}` : normalized;
+
+    let caseName = baseName;
+    let index = 2;
+    while (usedCaseNames.has(caseName)) {
+      caseName = `${baseName}_${index}`;
+      index += 1;
+    }
+
+    usedCaseNames.add(caseName);
+    return caseName;
+  }
+
   private static generateProperties(
     class_: ClassType,
     schema: TableSchema,
@@ -215,7 +287,7 @@ export class PHPEntityGenerator {
       if (item.type === 'column') {
         const column = item.column;
         const fieldName = ORMMappingUtils.getFieldName(column.name, options);
-        const phpType = ORMMappingUtils.mapToPHPType(column, options);
+        const phpType = ORMMappingUtils.mapToPHPType(column, options, schema.name);
 
         const param = constructor.addPromotedParameter(fieldName);
         param.setType(phpType);

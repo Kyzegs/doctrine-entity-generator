@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { toPascalCase, toCamelCase, getErrorMessage, computeEntityName, pluralize, singularize } from '../utils';
+import {
+  toPascalCase,
+  toCamelCase,
+  getErrorMessage,
+  computeEntityName,
+  pluralize,
+  singularize,
+  buildShareableConfiguration,
+  mergeShareableConfigIntoOptions,
+} from '../utils';
 
 describe('utils', () => {
   describe('toPascalCase', () => {
@@ -162,6 +171,34 @@ describe('utils', () => {
           'user'
         )
       ).toBe('User');
+    });
+  });
+
+  describe('shareable configuration', () => {
+    it('should persist generateEnumsFromSql through shared config', () => {
+      const config = buildShareableConfiguration({
+        namespace: 'App\\Entity',
+        entityPrefix: '',
+        entitySuffix: '',
+        entityName: '',
+        classNamingConvention: 'inherit',
+        databaseDialect: 'mysql',
+        customDataTypes: [],
+        columnFieldMappings: [],
+        explicitlyDefineColumns: false,
+        useAttributeMapping: false,
+        generateEnumsFromSql: true,
+        publicProperties: false,
+        generateGetters: true,
+        generateSetters: true,
+        generateFluentSetters: true,
+        relationships: [],
+        customTraits: [],
+        selectedTraits: [],
+      } as any);
+
+      expect(config.generateEnumsFromSql).toBe(true);
+      expect(mergeShareableConfigIntoOptions(config).generateEnumsFromSql).toBe(true);
     });
   });
 

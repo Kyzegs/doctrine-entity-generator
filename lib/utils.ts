@@ -44,6 +44,7 @@ type ShareableOptionKey = keyof Pick<
   | 'columnFieldMappings'
   | 'explicitlyDefineColumns'
   | 'useAttributeMapping'
+  | 'generateEnumsFromSql'
   | 'customTraits'
 >;
 const SHAREABLE_OPTION_KEYS: ShareableOptionKey[] = [
@@ -55,6 +56,7 @@ const SHAREABLE_OPTION_KEYS: ShareableOptionKey[] = [
   'columnFieldMappings',
   'explicitlyDefineColumns',
   'useAttributeMapping',
+  'generateEnumsFromSql',
   'customTraits',
 ];
 

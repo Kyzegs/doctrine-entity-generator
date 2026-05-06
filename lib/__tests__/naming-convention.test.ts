@@ -17,6 +17,7 @@ describe('Class Naming Convention', () => {
     columnFieldMappings: [],
     explicitlyDefineColumns: false,
     useAttributeMapping: true,
+    generateEnumsFromSql: false,
     publicProperties: false,
     generateGetters: true,
     generateSetters: true,
