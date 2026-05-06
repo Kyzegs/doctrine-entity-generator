@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSharedDataServer } from '@/lib/utils';
+import { getSharedDataServer } from '@/lib/share-server';
 
 // GET /api/share/[code] - Retrieve a shareable link
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ code: string }> }) {

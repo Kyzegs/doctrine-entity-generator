@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { getSharedDataServer, toPascalCase, ShareableCode } from '@/lib/utils';
+import { getSharedDataServer } from '@/lib/share-server';
+import { toPascalCase, ShareableCode } from '@/lib/utils';
 import { SQLParser } from '@/lib/sql-parser';
 import { DatabaseDialect } from '@/lib/example-queries';
 import { SharedCodeClient } from './shared-code-client';
