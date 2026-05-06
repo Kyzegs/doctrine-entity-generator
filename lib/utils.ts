@@ -2,7 +2,6 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import pluralizePackage from 'pluralize';
 import { GenerationOptions, GeneratedEntity, ShareableConfiguration } from './types';
-import { prisma } from './prisma';
 
 /**
  * Extract a user-facing error message from an unknown error.
@@ -145,39 +144,6 @@ export async function createShareUrl(data: ShareableCode): Promise<string> {
   } catch (error) {
     console.error('Failed to create share link:', error);
     throw new Error('Failed to create share link');
-  }
-}
-
-export type GetSharedDataResult = { data: ShareableCode; expiresAt: Date } | { expired: true } | null;
-
-/**
- * Retrieves shared data from the database (server-side).
- * Returns { data, expiresAt } when found and valid, { expired: true } when found but expired (and deletes it), null when not found.
- */
-export async function getSharedDataServer(code: string): Promise<GetSharedDataResult> {
-  try {
-    const shareableLink = await prisma.shareableLink.findUnique({
-      where: { code },
-    });
-
-    if (!shareableLink) {
-      return null;
-    }
-
-    if (new Date() > shareableLink.expiresAt) {
-      await prisma.shareableLink.delete({
-        where: { code },
-      });
-      return { expired: true };
-    }
-
-    return {
-      data: JSON.parse(shareableLink.data) as ShareableCode,
-      expiresAt: shareableLink.expiresAt,
-    };
-  } catch (error) {
-    console.error('Failed to retrieve shared data:', error);
-    return null;
   }
 }
 

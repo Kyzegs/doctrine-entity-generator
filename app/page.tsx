@@ -640,8 +640,8 @@ export default function Home() {
                     onChange={setSqlInput}
                     height="100%"
                     minHeight="16rem"
-                    theme={tomorrowNight}
-                    extensions={sqlEditorExtensions}
+                    theme="none"
+                    extensions={[...sqlEditorExtensions, ...tomorrowNight]}
                     placeholder="Paste your CREATE TABLE statement here or upload a .sql file..."
                     basicSetup={{ lineNumbers: true, foldGutter: false }}
                   />
