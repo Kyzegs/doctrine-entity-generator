@@ -90,6 +90,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      codemirror-theme-jetbrains-dark:
+        specifier: ^1.0.0
+        version: 1.0.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.1)(@lezer/highlight@1.2.3)
       js-php-generator:
         specifier: ^0.1.0
         version: 0.1.0
@@ -114,6 +117,9 @@ importers:
       pluralize:
         specifier: ^8.0.0
         version: 8.0.0
+      prism-theme-jetbrains-dark:
+        specifier: ^1.0.0
+        version: 1.0.0
       prismjs:
         specifier: ^1.30.0
         version: 1.30.0
@@ -2100,6 +2106,15 @@ packages:
       { integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA== }
     engines: { node: '>=6' }
 
+  codemirror-theme-jetbrains-dark@1.0.0:
+    resolution:
+      { integrity: sha512-oDXY4gm31wE4rPctYKP2E2RWW7/i9SJrqthSlZ+I2m5uP7yxDknM+1x7h8kqYyTyAxcu1DM9/aDlycvnuxyoYQ== }
+    peerDependencies:
+      '@codemirror/language': 6.12.3
+      '@codemirror/state': 6.6.0
+      '@codemirror/view': 6.41.1
+      '@lezer/highlight': 1.2.3
+
   codemirror@6.0.2:
     resolution:
       { integrity: sha512-VhydHotNW5w1UGK0Qj96BwSk/Zqbp9WbnyK2W/eVMv4QyF41INRGpjUhFJY7/uDNuudSc33a/PKr4iDqRduvHw== }
@@ -3399,6 +3414,10 @@ packages:
       { integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw== }
     engines: { node: '>=14' }
     hasBin: true
+
+  prism-theme-jetbrains-dark@1.0.0:
+    resolution:
+      { integrity: sha512-VDW6HGmYquKu13yOXvfLDpjEsteXA7n1Lfa/9Y0M4YwGm1zlfTe1kojm8GE8ric108HjKsduvAvwWITwf9o3vA== }
 
   prisma@6.19.3:
     resolution:
@@ -5722,6 +5741,13 @@ snapshots:
 
   clsx@2.1.1: {}
 
+  codemirror-theme-jetbrains-dark@1.0.0(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.1)(@lezer/highlight@1.2.3):
+    dependencies:
+      '@codemirror/language': 6.12.3
+      '@codemirror/state': 6.6.0
+      '@codemirror/view': 6.41.1
+      '@lezer/highlight': 1.2.3
+
   codemirror@6.0.2:
     dependencies:
       '@codemirror/autocomplete': 6.20.1
@@ -6879,6 +6905,8 @@ snapshots:
   prelude-ls@1.2.1: {}
 
   prettier@3.8.3: {}
+
+  prism-theme-jetbrains-dark@1.0.0: {}
 
   prisma@6.19.3(typescript@6.0.3):
     dependencies:

@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql, MySQL, PostgreSQL, SQLite } from '@codemirror/lang-sql';
-import { islandsDarkCodeMirror } from '@/lib/islands-dark-editor-theme';
+import { jetbrainsDark as jetbrainsDarkCodeMirror } from 'codemirror-theme-jetbrains-dark';
 import { toast } from 'sonner';
 import {
   createShareUrl,
@@ -651,7 +651,7 @@ export default function Home() {
                     height="100%"
                     minHeight="16rem"
                     theme="none"
-                    extensions={[...sqlEditorExtensions, ...islandsDarkCodeMirror]}
+                    extensions={[...sqlEditorExtensions, ...jetbrainsDarkCodeMirror]}
                     placeholder="Paste your CREATE TABLE statement here or upload a .sql file..."
                     basicSetup={{
                       lineNumbers: true,

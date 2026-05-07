@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Share2 } from 'lucide-react';
 import {
-  islandsDarkColors,
-  islandsDarkLineNumberStyle,
-  islandsDarkPrism,
-  islandsDarkTypography,
-} from '@/lib/islands-dark-editor-theme';
+  jetbrainsDark as jetbrainsDarkPrism,
+  jetbrainsDarkColors,
+  jetbrainsDarkLineNumberStyle,
+  jetbrainsDarkTypography,
+} from 'prism-theme-jetbrains-dark';
 
 interface CodeTab {
   id: string;
@@ -104,17 +104,17 @@ export function TabbedCodeOutput({
             <div className="overflow-x-auto">
               <SyntaxHighlighter
                 language={getLanguage(tab.language)}
-                style={islandsDarkPrism}
+                style={jetbrainsDarkPrism}
                 customStyle={{
                   margin: 0,
                   borderRadius: 0,
-                  backgroundColor: islandsDarkColors.editorBackground,
-                  color: islandsDarkColors.editorForeground,
-                  fontFamily: islandsDarkTypography.fontFamily,
-                  fontSize: islandsDarkTypography.fontSize,
-                  lineHeight: islandsDarkTypography.lineHeight,
+                  backgroundColor: jetbrainsDarkColors.editorBackground,
+                  color: jetbrainsDarkColors.editorForeground,
+                  fontFamily: jetbrainsDarkTypography.fontFamily,
+                  fontSize: jetbrainsDarkTypography.fontSize,
+                  lineHeight: jetbrainsDarkTypography.lineHeight,
                 }}
-                lineNumberStyle={islandsDarkLineNumberStyle}
+                lineNumberStyle={jetbrainsDarkLineNumberStyle}
                 showLineNumbers={true}
                 wrapLines={true}
               >

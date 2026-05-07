@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { FileCode, FileJson, Database, Share2, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  islandsDarkColors,
-  islandsDarkLineNumberStyle,
-  islandsDarkPrism,
-  islandsDarkTypography,
-} from '@/lib/islands-dark-editor-theme';
+  jetbrainsDark as jetbrainsDarkPrism,
+  jetbrainsDarkColors,
+  jetbrainsDarkLineNumberStyle,
+  jetbrainsDarkTypography,
+} from 'prism-theme-jetbrains-dark';
 
 export interface CodeFile {
   id: string;
@@ -169,19 +169,19 @@ export function FileCodeViewer({
           {activeFile && (
             <SyntaxHighlighter
               language={getLanguage(activeFile.language)}
-              style={islandsDarkPrism}
+              style={jetbrainsDarkPrism}
               customStyle={{
                 margin: 0,
                 borderRadius: 0,
-                backgroundColor: islandsDarkColors.editorBackground,
-                color: islandsDarkColors.editorForeground,
-                fontFamily: islandsDarkTypography.fontFamily,
-                fontSize: islandsDarkTypography.fontSize,
-                lineHeight: islandsDarkTypography.lineHeight,
+                backgroundColor: jetbrainsDarkColors.editorBackground,
+                color: jetbrainsDarkColors.editorForeground,
+                fontFamily: jetbrainsDarkTypography.fontFamily,
+                fontSize: jetbrainsDarkTypography.fontSize,
+                lineHeight: jetbrainsDarkTypography.lineHeight,
                 padding: '1rem 1.25rem',
                 minHeight: '100%',
               }}
-              lineNumberStyle={islandsDarkLineNumberStyle}
+              lineNumberStyle={jetbrainsDarkLineNumberStyle}
               showLineNumbers
               wrapLines
             >
